@@ -512,6 +512,30 @@ header p { opacity: 0.8; font-size: 0.9rem; }
     <div id="asbest-toepassingen-lijst" class="dynamic-list"></div>
     <button class="btn btn-secondary btn-sm" onclick="addAsbestOverzicht()" style="margin-top:12px;">+ Toepassing overzicht toevoegen</button>
   </div>
+
+  <div class="sub-section">
+    <h4>3.2 Onderzoeksmethoden & lab</h4>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Naam laboratorium</label>
+        <input type="text" id="lab-naam" value="Eurofins" placeholder="bv. Eurofins">
+      </div>
+      <div class="form-group full">
+        <label>Erkend door</label>
+        <input type="text" id="lab-erkend" value="FOD WASO" placeholder="bv. FOD WASO">
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-section">
+    <h4>3.3 Beperkingen asbestonderzoek</h4>
+    <div class="form-group full" style="margin-bottom:12px;">
+      <label>Projectspecifieke beperkingen asbestonderzoek</label>
+      <div class="info-box">Toepassingen die niet-inspecteerbaar/niet-bereikbaar waren (bv. roofing)</div>
+      <div id="asbest-beperkingen-lijst" class="dynamic-list"></div>
+      <button class="btn btn-secondary btn-sm" onclick="addAsbestBeperking()" style="margin-top:8px;">+ Asbestbeperking toevoegen</button>
+    </div>
+  </div>
 </div>
 
 <div class="section">
@@ -966,6 +990,30 @@ function addAsbestOverzicht() {
   document.getElementById('asbest-toepassingen-lijst').appendChild(div);
 }
 
+// ===== DYNAMIC: ASBEST BEPERKINGEN =====
+let asbestBeperkingCount = 0;
+function addAsbestBeperking() {
+  asbestBeperkingCount++;
+  const id = asbestBeperkingCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `asbestbep-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>Beperking ${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Toepassing</label><input type="text" class="ab-toepassing" placeholder="bv. Roofing"></div>
+      <div class="form-group"><label>Locatie</label><input type="text" class="ab-locatie" placeholder="bv. Dak gebouw nr. 57"></div>
+      <div class="form-group"><label>Motivatie</label><input type="text" class="ab-motivatie" placeholder="bv. Niet-toegankelijk (> 3,5 m hoog)"></div>
+      <div class="form-group"><label>Monstername</label><input type="text" class="ab-monstername" value="Niet uitgevoerd"></div>
+      <div class="form-group full"><label>Aanbeveling</label><input type="text" class="ab-aanbeveling" placeholder="bv. Testen op teer- en asbesthoudendheid"></div>
+    </div>
+  `;
+  document.getElementById('asbest-beperkingen-lijst').appendChild(div);
+}
+
 // ===== IMAGE PROCESSING (EXIF + SCALING) =====
 function getExifOrientation(bytes) {
   if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) return 1;
@@ -1376,6 +1424,8 @@ async function generateSOP() {
     children.push(mkP('Buitenverhardingen', { heading: HeadingLevel.HEADING_3 }));
     if (document.getElementById('buitenverharding-aanwezig').value === 'ja') {
       children.push(mkP('☒ Er is buitenverharding aanwezig. De (gedeeltelijke) opbraak ervan behoort tot de scope van voorliggend SOP.'));
+      children.push(mkP('* Indien de opbraak van de fundering(en) tot de scope van voorliggend SOP behoort: inventariseer de (ongekende) fundering(en) in de inventaris van Bijlage 2.', { size: 18, italics: true }));
+      children.push(mkP('† Voor de berekening van de bruto bruikbare oppervlakte/het bouwvolume van een gebouw/constructie moet steeds rekening worden gehouden met de bovengrondse én ondergrondse oppervlaktes/ruimtes.', { size: 18, italics: true }));
       for (const v of verhardingen) {
         children.push(new Table({
           rows: [
@@ -1527,6 +1577,7 @@ async function generateSOP() {
       children.push(mkP('☒ Er werden geen asbesthoudende toepassingen teruggevonden tijdens het veldonderzoek.'));
     }
     children.push(mkP('Een overzicht van de monstername, analyse en de beschrijvende fiches van de asbestverdachte en asbesthoudende materialen zijn opgenomen in de destructieve asbestinventaris in Bijlage 3.'));
+    children.push(mkP('* De samenvattende 3-delige code voor asbest wordt toegekend door de hoogste getallen, zijnde de meest strenge voorwaarden, te weerhouden. Deze samenvattende code heeft louter een signaalfunctie welke aangeeft of de aanwezigheid van een erkende asbestverwijderaar tijdens de sloopwerken al dan niet noodzakelijk is.', { size: 18, italics: true }));
 
     // Gevaarlijke materialen
     children.push(mkP('Onderzoek naar potentieel gevaarlijke materialen andere dan asbest', { heading: HeadingLevel.HEADING_3 }));
@@ -1795,6 +1846,68 @@ async function generateSOP() {
         ]));
       }
       children.push(new Table({ rows: aoRows, width: { size: 9000, type: WidthType.DXA } }));
+      children.push(mkP(''));
+    }
+
+    // Analyse in het laboratorium
+    const labNaam = document.getElementById('lab-naam').value || 'Eurofins';
+    const labErkend = document.getElementById('lab-erkend').value || 'FOD WASO';
+    children.push(mkP('Analyse in het laboratorium', { heading: HeadingLevel.HEADING_3 }));
+    children.push(mkP(`De materiaalmonsters werden geanalyseerd door ${labNaam}, een laboratorium geanalyseerd op aanwezigheid van asbestmaterialen (Chrysotiel, Amosiet, Crocidoliet, Anthofyliet, Tremoliet en Actinoliet). Het laboratorium is erkend door ${labErkend}.`));
+    children.push(mkP('In de analyserapporten van het laboratorium, die in bijlage weergegeven zijn, is de aard van het asbesthoudende materiaal vastgesteld.'));
+
+    // Beperkingen asbestonderzoek
+    children.push(mkP('Beperkingen van het onderzoek', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP('Algemene beperkingen', { heading: HeadingLevel.HEADING_3 }));
+    children.push(mkP('De inventaris heeft betrekking tot de te slopen bebouwing en bijkomende uitrustingen die zich in het gebouw bevinden, met uitzondering van de gebouwdelen die niet toegankelijk waren en/of de plaatsen waar destructief onderzoek niet mogelijk was.'));
+    children.push(mkP('Het is dus niet uitgesloten dat verdachte materialen, ontoegankelijk tijdens de inspectie omwille van technische redenen of om veiligheidsredenen, kunnen worden aangetroffen bij het uitvoeren van werken. In dat geval moet elk verdacht materiaal alsnog geanalyseerd worden en indien het asbesthoudend blijkt te zijn, opgenomen worden in het beheerprogramma of verwijderd worden tijdens afbraakwerken.'));
+
+    // Projectspecifieke beperkingen asbest
+    const asbestBeperkingen = [];
+    for (const el of document.querySelectorAll('#asbest-beperkingen-lijst .dynamic-item')) {
+      asbestBeperkingen.push({
+        toepassing: qv(el, '.ab-toepassing'), locatie: qv(el, '.ab-locatie'),
+        motivatie: qv(el, '.ab-motivatie'), monstername: qv(el, '.ab-monstername'),
+        aanbeveling: qv(el, '.ab-aanbeveling'),
+      });
+    }
+    if (asbestBeperkingen.length > 0) {
+      children.push(mkP('Projectspecifieke beperkingen', { heading: HeadingLevel.HEADING_3 }));
+      const abRows = [mkRow([
+        mkCell('Toepassing', { bold: true }), mkCell('Locatie', { bold: true }),
+        mkCell('Motivatie', { bold: true }), mkCell('Monstername', { bold: true }),
+        mkCell('Aanbeveling', { bold: true }),
+      ])];
+      for (const ab of asbestBeperkingen) {
+        abRows.push(mkRow([
+          mkCell(ab.toepassing, { italics: true }), mkCell(ab.locatie, { italics: true }),
+          mkCell(ab.motivatie, { italics: true }), mkCell(ab.monstername, { italics: true }),
+          mkCell(ab.aanbeveling, { italics: true }),
+        ]));
+      }
+      children.push(new Table({ rows: abRows, width: { size: 9000, type: WidthType.DXA } }));
+      children.push(mkP(''));
+    }
+
+    // Overzicht van het asbestonderzoek
+    if (materiaalfiches.length > 0) {
+      children.push(mkP('Overzicht van het asbestonderzoek', { heading: HeadingLevel.HEADING_2 }));
+      const ovzRows = [mkRow([
+        mkCell('Ref.', { bold: true, size: 16 }), mkCell('Locatie', { bold: true, size: 16 }),
+        mkCell('Toepassing', { bold: true, size: 16 }), mkCell('Hoeveelheid', { bold: true, size: 16 }),
+        mkCell('3-delige code', { bold: true, size: 16 }), mkCell('Asbesthoudend', { bold: true, size: 16 }),
+        mkCell('Bemonsterd', { bold: true, size: 16 }),
+      ])];
+      for (let i = 0; i < materiaalfiches.length; i++) {
+        const f = materiaalfiches[i];
+        ovzRows.push(mkRow([
+          mkCell(String(i + 1), { italics: true, size: 16 }), mkCell(f.locatie, { italics: true, size: 16 }),
+          mkCell(f.toepassing, { italics: true, size: 16 }), mkCell(f.hoeveelheid, { italics: true, size: 16 }),
+          mkCell(f.code || '-', { italics: true, size: 16 }), mkCell(f.asbestStatus, { bold: f.asbestStatus === 'Asbesthoudend', size: 16 }),
+          mkCell(f.monster ? 'Ja' : 'Nee', { italics: true, size: 16 }),
+        ]));
+      }
+      children.push(new Table({ rows: ovzRows, width: { size: 9000, type: WidthType.DXA } }));
       children.push(mkP(''));
     }
 

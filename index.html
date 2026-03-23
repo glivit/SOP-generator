@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOP Generator — Sloopopvolgingsplan</title>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<style>
+:root {
+  --primary: #1b4332;
+  --primary-light: #2d6a4f;
+  --accent: #40916c;
+  --bg: #f5f7f5;
+  --card: #ffffff;
+  --border: #d8e2dc;
+  --text: #2c3e50;
+  --text-light: #7f8c8d;
+  --danger: #c0392b;
+  --success: #27ae60;
+  --warning: #f39c12;
+  --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 20px; }
+
+header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 24px 0; margin-bottom: 24px; }
+header .container { display: flex; align-items: center; gap: 16px; }
+header h1 { font-size: 1.5rem; font-weight: 600; }
+header .version { opacity: 0.7; font-size: 0.75rem; margin-left: 8px; }
+header p { opacity: 0.8; font-size: 0.9rem; }
+
+.section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+.section-title { font-size: 1.1rem; font-weight: 600; color: var(--primary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: flex; align-items: center; gap: 8px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.form-group .hint { font-size: 0.75rem; color: var(--text-light); }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 0.9rem; font-family: inherit; transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,0.1);
+}
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+.checkbox-option { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+.checkbox-option:hover { background: #f0f4f0; }
+.checkbox-option input[type="checkbox"] { margin-top: 3px; accent-color: var(--accent); }
+.checkbox-option span { font-size: 0.85rem; }
+
+.btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; font-family: inherit; transition: all 0.2s; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-secondary { background: var(--accent); color: white; }
+.btn-secondary:hover { background: var(--primary-light); }
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover { opacity: 0.9; }
+.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+.dynamic-list { display: flex; flex-direction: column; gap: 12px; }
+.dynamic-item { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; background: #fafcfa; position: relative; }
+.dynamic-item .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.dynamic-item .item-header h4 { font-size: 0.95rem; color: var(--primary); }
+
+.image-upload { border: 2px dashed var(--border); border-radius: 6px; padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+.image-upload:hover { border-color: var(--accent); }
+.image-upload input { display: none; }
+.image-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.image-preview img { width: 100px; height: 75px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); }
+
+.generate-bar { position: sticky; bottom: 0; background: white; border-top: 2px solid var(--accent); padding: 16px 0; z-index: 100; margin-top: 24px; }
+.generate-bar .container { display: flex; justify-content: space-between; align-items: center; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 8px 16px; border: 1px solid var(--border); border-radius: 6px 6px 0 0; cursor: pointer; font-size: 0.85rem; font-weight: 500; background: #f0f4f0; transition: all 0.2s; }
+.tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.info-box { background: #e8f5e9; border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px; font-size: 0.85rem; }
+
+.sub-section { background: #f9faf9; border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+.sub-section h4 { font-size: 0.9rem; color: var(--primary-light); margin-bottom: 8px; }
+
+@keyframes flash-green {
+  0% { background-color: #a7f3d0; } 100% { background-color: transparent; }
+}
+.flash { animation: flash-green 0.8s ease-out; }
+
+@media (max-width: 700px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-grid.cols-3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div>
+      <h1>SOP Generator <span class="version">v1.0</span></h1>
+      <p>Sloopopvolgingsplan — Realed</p>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('tab-algemeen')">1. Algemeen</div>
+  <div class="tab" onclick="switchTab('tab-voorstudie')">2. Voorstudie</div>
+  <div class="tab" onclick="switchTab('tab-veldonderzoek')">3. Veldonderzoek</div>
+  <div class="tab" onclick="switchTab('tab-beperkingen')">4. Beperkingen</div>
+  <div class="tab" onclick="switchTab('tab-aanbevelingen')">5. Aanbevelingen</div>
+  <div class="tab" onclick="switchTab('tab-inventaris')">6. Inventaris</div>
+  <div class="tab" onclick="switchTab('tab-asbest')">7. Asbestinventaris</div>
+  <div class="tab" onclick="switchTab('tab-gevaarlijk')">8. Gevaarlijke mat.</div>
+  <div class="tab" onclick="switchTab('tab-fotos')">9. Foto's & Plannen</div>
+</div>
+
+<!-- ============== TAB 1: ALGEMEEN ============== -->
+<div id="tab-algemeen" class="tab-content active">
+
+<div class="section">
+  <div class="section-title">Voorblad & Administratieve gegevens</div>
+  <div class="form-grid">
+    <div class="form-group full">
+      <label>Foto voorblad</label>
+      <div class="image-upload" onclick="this.querySelector('input').click()">
+        <input type="file" id="foto-voorblad" accept="image/*">
+        <span>Klik om foto te uploaden</span>
+        <div class="image-preview" id="preview-voorblad"></div>
+      </div>
+    </div>
+    <div class="form-group full">
+      <label>Adres project (werflocatie)</label>
+      <input type="text" id="adres" placeholder="bv. Zwaanhofweg 19 te 8900 Ieper">
+    </div>
+    <div class="form-group">
+      <label>Naam sloopdeskundige</label>
+      <input type="text" id="deskundige-naam" value="Vandeputte Vincent">
+    </div>
+    <div class="form-group">
+      <label>Aanspreking (dhr./mevr.)</label>
+      <select id="deskundige-aanspreking">
+        <option value="dhr.">dhr.</option>
+        <option value="mevr.">mevr.</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Opgemaakt te</label>
+      <input type="text" id="opgemaakt-te" value="Brugge">
+    </div>
+    <div class="form-group">
+      <label>Datum opmaak</label>
+      <input type="date" id="datum-opmaak">
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Situering project</div>
+  <div class="form-grid">
+    <div class="form-group full">
+      <label>Kadastrale gegevens</label>
+      <input type="text" id="kadastraal" placeholder="Afdeling X Sectie X Nummer(s) XXXX">
+    </div>
+    <div class="form-group full">
+      <label>Plan situering project (Bijlage 1)</label>
+      <div class="image-upload" onclick="this.querySelector('input').click()">
+        <input type="file" id="plan-situering" accept="image/*" multiple>
+        <span>Klik om plan(nen) te uploaden</span>
+        <div class="image-preview" id="preview-situering"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Versiebeheer</div>
+  <div class="form-grid cols-3">
+    <div class="form-group">
+      <label>Versienummer</label>
+      <input type="text" id="versie-nr" value="V1">
+    </div>
+    <div class="form-group">
+      <label>Datum versie</label>
+      <input type="text" id="versie-datum" placeholder="dd/mm/yyyy">
+    </div>
+    <div class="form-group">
+      <label>Opmerkingen</label>
+      <input type="text" id="versie-opm" value="SOP">
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ============== TAB 2: VOORSTUDIE ============== -->
+<div id="tab-voorstudie" class="tab-content">
+
+<div class="section">
+  <div class="section-title">2.1 Beschrijving van het project</div>
+  <div class="form-group full" style="margin-bottom:16px;">
+    <label>Algemene projectbeschrijving</label>
+    <textarea id="project-beschrijving" rows="3" placeholder="bv. Het project betreft de sloop van een bestaande bedrijfsloods met vooraan geïntegreerde kantoorruimte."></textarea>
+  </div>
+
+  <div class="info-box">Je kan meerdere gebouwen toevoegen. Klik op "+ Gebouw" om er een toe te voegen.</div>
+  <div id="gebouwen-lijst" class="dynamic-list"></div>
+  <button class="btn btn-secondary btn-sm" onclick="addGebouw()" style="margin-top:12px;">+ Gebouw toevoegen</button>
+</div>
+
+<div class="section">
+  <div class="section-title">Buitenverhardingen</div>
+  <div class="form-group" style="margin-bottom:12px;">
+    <label>Buitenverharding aanwezig?</label>
+    <select id="buitenverharding-aanwezig" onchange="toggleBuitenverharding()">
+      <option value="ja">Ja — opbraak behoort tot scope SOP</option>
+      <option value="nee">Nee — geen buitenverharding van toepassing</option>
+    </select>
+  </div>
+  <div id="verhardingen-container">
+    <div id="verhardingen-lijst" class="dynamic-list"></div>
+    <button class="btn btn-secondary btn-sm" onclick="addVerharding()" style="margin-top:12px;">+ Verhardingszone toevoegen</button>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">2.2 Voorbereidend (historisch) onderzoek</div>
+
+  <div class="sub-section">
+    <h4>Bedrijfsactiviteiten en vergunningen</h4>
+    <select id="bedrijfsactiviteiten" class="form-group" style="width:100%;padding:8px;">
+      <option value="geen">Geen informatie ter beschikking gesteld / niet van toepassing</option>
+      <option value="wel">Er werd informatie ter beschikking gesteld (specificeer hieronder)</option>
+    </select>
+    <textarea id="bedrijfsactiviteiten-detail" rows="2" placeholder="Details bedrijfsactiviteiten..." style="width:100%;margin-top:8px;display:none;"></textarea>
+  </div>
+
+  <div class="sub-section">
+    <h4>Bouwplannen en bestekken</h4>
+    <select id="bouwplannen" style="width:100%;padding:8px;">
+      <option value="wel">Er zijn bestaande plannen/bestekken ter beschikking gesteld</option>
+      <option value="geen">Er zijn geen plannen/bestekken beschikbaar</option>
+    </select>
+  </div>
+
+  <div class="sub-section">
+    <h4>Bestaande asbestinventaris(sen)</h4>
+    <select id="bestaande-asbest" style="width:100%;padding:8px;">
+      <option value="geen">Geen beschikbaar / niet relevant</option>
+      <option value="ovam">Er is een bestaande OVAM asbestinventaris beschikbaar</option>
+      <option value="ander">Er is een andere asbestinventaris beschikbaar</option>
+    </select>
+  </div>
+
+  <div class="sub-section">
+    <h4>Bestaande sloopinventaris(sen)</h4>
+    <select id="bestaande-sloop" style="width:100%;padding:8px;">
+      <option value="geen">Geen beschikbaar / niet relevant</option>
+      <option value="wel">Er is een bestaande sloopinventaris beschikbaar</option>
+    </select>
+  </div>
+
+  <div class="sub-section">
+    <h4>Bodemonderzoek(en)</h4>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Geoloket nagekeken op</label>
+        <input type="text" id="geoloket-datum" placeholder="dd/mm/yyyy">
+      </div>
+      <div class="form-group full">
+        <select id="bodem-status" style="width:100%;padding:8px;" onchange="toggleBodemDetail()">
+          <option value="geen-dossiers">Geen opdrachten of dossiers gekend bij OVAM</option>
+          <option value="overlap">Overlap met uitgevoerde bodemonderzoeken</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <select id="bodem-beschikbaar" style="width:100%;padding:8px;">
+          <option value="geen">Geen bodemonderzoek ter beschikking gesteld — onvoldoende info</option>
+          <option value="wel">Bodemonderzoek(en) ter beschikking gesteld</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Conclusie bodemonderzoek</label>
+        <textarea id="bodem-conclusie" rows="2" placeholder='bv. "Er is geen weet van verontreiniging". Er zijn bij OVAM geen opdrachten of dossiers gekend voor deze grond.'></textarea>
+      </div>
+      <div class="form-group full">
+        <label>Screenshot Geoloket</label>
+        <div class="image-upload" onclick="this.querySelector('input').click()">
+          <input type="file" id="geoloket-screenshot" accept="image/*">
+          <span>Klik om screenshot te uploaden</span>
+          <div class="image-preview" id="preview-geoloket"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-section">
+    <h4>Technisch verslag</h4>
+    <select id="technisch-verslag" style="width:100%;padding:8px;">
+      <option value="geen">Geen technisch verslag beschikbaar</option>
+      <option value="wel">Technisch verslag beschikbaar</option>
+    </select>
+  </div>
+
+  <div class="sub-section">
+    <h4>PFAS</h4>
+    <div class="form-grid">
+      <div class="form-group full">
+        <select id="pfas-status" style="width:100%;padding:8px;">
+          <option value="geen-overlap">Geen overlap met potentiële bronzone PFAS, geen risico-activiteiten</option>
+          <option value="wel-overlap">Overlap met potentiële bronzone PFAS</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Datum nazicht DOV</label>
+        <input type="text" id="pfas-datum" placeholder="dd/mm/yyyy">
+      </div>
+      <div class="form-group full">
+        <label>Screenshot PFAS-kaart</label>
+        <div class="image-upload" onclick="this.querySelector('input').click()">
+          <input type="file" id="pfas-screenshot" accept="image/*">
+          <span>Klik om screenshot te uploaden</span>
+          <div class="image-preview" id="preview-pfas"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-section">
+    <h4>Regiogebonden risico's</h4>
+    <select id="regio-risico" style="width:100%;padding:8px;">
+      <option value="geen">Niet gelegen t.h.v. regiogebonden risico's</option>
+      <option value="wel">Gelegen t.h.v. regiogebonden risico's (specificeer)</option>
+    </select>
+    <textarea id="regio-risico-detail" rows="2" placeholder="Details..." style="width:100%;margin-top:8px;display:none;"></textarea>
+  </div>
+</div>
+
+</div>
+
+<!-- ============== TAB 3: VELDONDERZOEK ============== -->
+<div id="tab-veldonderzoek" class="tab-content">
+
+<div class="section">
+  <div class="section-title">3.1 Administratieve gegevens veldonderzoek</div>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Datum plaatsbezoek</label>
+      <input type="text" id="datum-plaatsbezoek" placeholder="dd/mm/yyyy">
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">3.2 Veldonderzoek gebouwen — Asbest</div>
+  <div class="form-grid">
+    <div class="form-group full">
+      <select id="asbest-gevonden" style="width:100%;padding:8px;" onchange="toggleAsbestDetail()">
+        <option value="ja">Er werden asbesthoudende toepassingen teruggevonden</option>
+        <option value="nee">Er werden GEEN asbesthoudende toepassingen teruggevonden</option>
+      </select>
+    </div>
+    <div id="asbest-detail-section">
+      <div class="form-grid" style="margin-top:12px;">
+        <div class="form-group">
+          <label>Samenvattende 3-delige code</label>
+          <input type="text" id="driedelige-code" placeholder="bv. 1.1.1" value="1.1.1">
+          <span class="hint">Hoogste waarden per positie</span>
+        </div>
+        <div class="form-group">
+          <label>Verwijdering door</label>
+          <select id="verwijdering-door">
+            <option value="opgeleid">Opgeleid personeel</option>
+            <option value="erkend">Erkende asbestverwijderaar</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">3.2 Onderzoek gevaarlijke materialen (andere dan asbest)</div>
+  <div class="form-grid">
+    <div class="form-group full">
+      <select id="gevaarlijk-gevonden" style="width:100%;padding:8px;">
+        <option value="ja">Er werden potentieel gevaarlijke materialen teruggevonden</option>
+        <option value="nee">Er werden GEEN potentieel gevaarlijke materialen teruggevonden</option>
+      </select>
+    </div>
+    <div class="form-group full">
+      <select id="gevaarlijk-monsternames" style="width:100%;padding:8px;">
+        <option value="geen">Geen monsternames/analyses uitgevoerd</option>
+        <option value="wel">Er zijn monsternames/analyses uitgevoerd</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">3.3 Veldonderzoek buitenomgeving</div>
+  <div class="form-grid">
+    <div class="form-group full">
+      <select id="buiten-vaststellingen" style="width:100%;padding:8px;">
+        <option value="geen">Geen bijzondere zaken vastgesteld</option>
+        <option value="wel">Bijzondere zaken vastgesteld (specificeer)</option>
+      </select>
+    </div>
+    <div class="form-group full">
+      <select id="buiten-kernboringen" style="width:100%;padding:8px;">
+        <option value="geen">Geen kernboringen uitgevoerd</option>
+        <option value="wel">Kernboringen uitgevoerd</option>
+      </select>
+    </div>
+    <div class="form-group full">
+      <select id="buiten-monsternames" style="width:100%;padding:8px;">
+        <option value="geen">Geen monsternames/analyses van de buitenomgeving uitgevoerd</option>
+        <option value="wel">Monsternames/analyses uitgevoerd</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ============== TAB 4: BEPERKINGEN ============== -->
+<div id="tab-beperkingen" class="tab-content">
+
+<div class="section">
+  <div class="section-title">3.4 Beperkingen van het veldonderzoek</div>
+  <div class="info-box">De standaard algemene beperkingen worden automatisch toegevoegd (plafondconstructies, toestellen, leidingen/kabels, materialen in opslag).</div>
+</div>
+
+<div class="section">
+  <div class="section-title">Projectspecifieke beperkingen</div>
+  <div class="form-group" style="margin-bottom:12px;">
+    <label>Niet-toegankelijke ruimtes</label>
+    <select id="niet-toegankelijk" style="width:100%;padding:8px;" onchange="toggleNietToegankelijk()">
+      <option value="geen">Er zijn GEEN ruimtes die niet toegankelijk waren</option>
+      <option value="wel">Er zijn ruimtes die niet toegankelijk waren</option>
+    </select>
+  </div>
+  <div id="niet-toegankelijk-container" style="display:none;">
+    <div id="niet-toegankelijk-lijst" class="dynamic-list"></div>
+    <button class="btn btn-secondary btn-sm" onclick="addNietToegankelijk()" style="margin-top:12px;">+ Niet-toegankelijke zone toevoegen</button>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Hergebruik en hoogwaardige recyclage</div>
+  <select id="hergebruik" style="width:100%;padding:8px;">
+    <option value="geen">Geen inschatting gemaakt bij veldonderzoek</option>
+    <option value="wel">Er werden materialen geïdentificeerd voor hergebruik/recyclage</option>
+  </select>
+</div>
+
+</div>
+
+<!-- ============== TAB 5: AANBEVELINGEN ============== -->
+<div id="tab-aanbevelingen" class="tab-content">
+
+<div class="section">
+  <div class="section-title">4. Aanbevelingen en aandachtspunten</div>
+  <div class="info-box">De standaard algemene aanbevelingen (organisatorische voorzorgsmaatregelen, PBM, veiligheidsmaatregelen asbest, selectieve sloop) worden automatisch toegevoegd.</div>
+</div>
+
+<div class="section">
+  <div class="section-title">Projectspecifieke aanbevelingen</div>
+  <div class="form-group full" style="margin-bottom:12px;">
+    <label>Extra projectspecifieke aanbevelingen</label>
+    <textarea id="extra-aanbevelingen" rows="4" placeholder="Eventuele extra aanbevelingen bovenop de standaardset..."></textarea>
+  </div>
+  <div class="info-box">De standaard projectspecifieke aanbevelingen (verplicht te scheiden fracties, stopmomenten, asbesthoudende materialen, hergebruik/recyclage) worden automatisch meegenomen.</div>
+</div>
+
+</div>
+
+<!-- ============== TAB 6: INVENTARIS ============== -->
+<div id="tab-inventaris" class="tab-content">
+
+<div class="section">
+  <div class="section-title">Bijlage 2: Sloopinventaris</div>
+  <div class="info-box">Voeg hier alle materialen toe die in het gebouw zijn teruggevonden. Ze worden automatisch ingedeeld in: 2a (asbesthoudend), 2b (overig gevaarlijk), 2c (niet-gevaarlijk), 2d (totaal).</div>
+
+  <div id="inventaris-lijst" class="dynamic-list"></div>
+  <button class="btn btn-secondary btn-sm" onclick="addInventarisItem()" style="margin-top:12px;">+ Materiaal toevoegen</button>
+</div>
+
+</div>
+
+<!-- ============== TAB 7: ASBESTINVENTARIS ============== -->
+<div id="tab-asbest" class="tab-content">
+
+<div class="section">
+  <div class="section-title">Bijlage 3: Destructieve asbestinventaris</div>
+
+  <div class="sub-section">
+    <h4>3.1 Asbestverdachte materialen — overzicht</h4>
+    <div class="info-box">Per gebouw: welke toepassingen zijn aanwezig en bemonsterd?</div>
+    <div id="asbest-toepassingen-lijst" class="dynamic-list"></div>
+    <button class="btn btn-secondary btn-sm" onclick="addAsbestOverzicht()" style="margin-top:12px;">+ Toepassing overzicht toevoegen</button>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Materiaalfiches (asbestverdacht / -houdend)</div>
+  <div class="info-box">Voeg een fiche toe per onderzocht materiaal. Elke fiche bevat foto, kenmerken en conclusie.</div>
+  <div id="materiaalfiches-lijst" class="dynamic-list"></div>
+  <button class="btn btn-secondary btn-sm" onclick="addMateriaalfiche()" style="margin-top:12px;">+ Materiaalfiche toevoegen</button>
+</div>
+
+</div>
+
+<!-- ============== TAB 8: GEVAARLIJKE MATERIALEN ============== -->
+<div id="tab-gevaarlijk" class="tab-content">
+
+<div class="section">
+  <div class="section-title">Bijlage 4: Gevaarlijke materialen (andere dan asbest)</div>
+  <div class="info-box">Voeg fiches toe voor gevaarlijke materialen zoals TL-lampen, stookolietanks, PCB-condensatoren, etc.</div>
+  <div id="gevaarlijk-fiches-lijst" class="dynamic-list"></div>
+  <button class="btn btn-secondary btn-sm" onclick="addGevaarlijkFiche()" style="margin-top:12px;">+ Gevaarlijk materiaal fiche toevoegen</button>
+</div>
+
+</div>
+
+<!-- ============== TAB 9: FOTO'S & PLANNEN ============== -->
+<div id="tab-fotos" class="tab-content">
+
+<div class="section">
+  <div class="section-title">Bijlage 5: Foto's veldonderzoek</div>
+  <div class="info-box">Upload foto's per zone/verdieping. Voeg zones toe en sleep er foto's in.</div>
+  <div id="fotozones-lijst" class="dynamic-list"></div>
+  <button class="btn btn-secondary btn-sm" onclick="addFotozone()" style="margin-top:12px;">+ Fotozone toevoegen</button>
+</div>
+
+<div class="section">
+  <div class="section-title">Bijlage 6: Voorbereidend (historisch) onderzoek</div>
+  <div class="sub-section">
+    <h4>Bijlage 6b: Bouwplannen en bestekken</h4>
+    <div class="image-upload" onclick="this.querySelector('input').click()">
+      <input type="file" id="bouwplannen-fotos" accept="image/*" multiple>
+      <span>Klik om bouwplannen te uploaden</span>
+      <div class="image-preview" id="preview-bouwplannen"></div>
+    </div>
+  </div>
+  <div class="sub-section">
+    <h4>Bijlage 6c: Historisch fotomateriaal</h4>
+    <div id="historisch-fotos-lijst" class="dynamic-list"></div>
+    <button class="btn btn-secondary btn-sm" onclick="addHistorischFoto()" style="margin-top:8px;">+ Historische foto toevoegen</button>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Bijlage 7: Buitenverhardingen — foto's</div>
+  <div class="image-upload" onclick="this.querySelector('input').click()">
+    <input type="file" id="verharding-fotos" accept="image/*" multiple>
+    <span>Klik om foto's buitenverhardingen te uploaden</span>
+    <div class="image-preview" id="preview-verhardingen"></div>
+  </div>
+</div>
+
+</div>
+
+</div><!-- /container -->
+
+<!-- GENERATE BAR -->
+<div class="generate-bar">
+  <div class="container">
+    <span style="font-size:0.85rem;color:var(--text-light);">Alle secties ingevuld? Genereer je SOP.</span>
+    <button class="btn btn-primary" onclick="generateSOP()" id="btn-generate">Genereer SOP (.docx)</button>
+  </div>
+</div>
+
+<script>
+// ===== GLOBALS =====
+let gebouwCount = 0;
+let verhardingCount = 0;
+let inventarisCount = 0;
+let materiaalficheCount = 0;
+let gevaarlijkFicheCount = 0;
+let fotozoneCount = 0;
+let historischFotoCount = 0;
+let nietToegankelijkCount = 0;
+let asbestOverzichtCount = 0;
+
+// ===== TAB SWITCHING =====
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  const idx = tabId.replace('tab-','');
+  const tabs = document.querySelectorAll('.tab');
+  const tabMap = ['algemeen','voorstudie','veldonderzoek','beperkingen','aanbevelingen','inventaris','asbest','gevaarlijk','fotos'];
+  const i = tabMap.indexOf(idx);
+  if (i >= 0 && tabs[i]) tabs[i].classList.add('active');
+}
+
+// ===== TOGGLE HELPERS =====
+function toggleBuitenverharding() {
+  const v = document.getElementById('buitenverharding-aanwezig').value;
+  document.getElementById('verhardingen-container').style.display = v === 'ja' ? 'block' : 'none';
+}
+function toggleBodemDetail() {
+  // placeholder
+}
+function toggleAsbestDetail() {
+  const v = document.getElementById('asbest-gevonden').value;
+  document.getElementById('asbest-detail-section').style.display = v === 'ja' ? 'block' : 'none';
+}
+function toggleNietToegankelijk() {
+  const v = document.getElementById('niet-toegankelijk').value;
+  document.getElementById('niet-toegankelijk-container').style.display = v === 'wel' ? 'block' : 'none';
+}
+
+// ===== IMAGE UPLOAD HANDLERS =====
+function setupImagePreview(inputId, previewId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.addEventListener('change', function() {
+    const preview = document.getElementById(previewId);
+    if (!preview) return;
+    preview.innerHTML = '';
+    for (const file of this.files) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      preview.appendChild(img);
+    }
+  });
+}
+
+// ===== DYNAMIC: GEBOUWEN =====
+function addGebouw() {
+  gebouwCount++;
+  const id = gebouwCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `gebouw-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>Gebouw ${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Gebouwnaam</label><input type="text" class="geb-naam" placeholder="bv. Gebouw nr. 57"></div>
+      <div class="form-group"><label>Omschrijving/functie</label><input type="text" class="geb-functie" placeholder="bv. Opslagloods met kantoorruimte"></div>
+      <div class="form-group"><label>Type constructie</label>
+        <select class="geb-type"><option value="Niet-residentieel (NR)">Niet-residentieel (NR)</option><option value="Residentieel (R)">Residentieel (R)</option></select>
+      </div>
+      <div class="form-group"><label>Bouwlagen bovengronds</label><input type="number" class="geb-boven" value="1" min="0"></div>
+      <div class="form-group"><label>Bouwlagen ondergronds</label><input type="number" class="geb-onder" value="0" min="0"></div>
+      <div class="form-group"><label>Type werken bovenbouw</label>
+        <select class="geb-werken-boven"><option value="Volledige sloop">Volledige sloop</option><option value="Gedeeltelijke sloop">Gedeeltelijke sloop</option><option value="Renovatie">Renovatie</option><option value="Ontmanteling">Ontmanteling</option></select>
+      </div>
+      <div class="form-group"><label>Type werken onderbouw</label>
+        <select class="geb-werken-onder"><option value="Volledige sloop">Volledige sloop</option><option value="Gedeeltelijke sloop">Gedeeltelijke sloop</option><option value="Niet van toepassing">Niet van toepassing</option></select>
+      </div>
+      <div class="form-group"><label>Bruto bruikbare opp. (m²)</label><input type="text" class="geb-opp" placeholder="bv. 547,6 m²"></div>
+      <div class="form-group"><label>Bouwvolume (m³)</label><input type="text" class="geb-volume" placeholder="bv. 2742,80 m³"></div>
+      <div class="form-group"><label>Bouwjaar</label><input type="text" class="geb-bouwjaar" placeholder="bv. ± 1985"></div>
+      <div class="form-group"><label>Renovaties</label><input type="text" class="geb-renovaties" value="Onbekend"></div>
+    </div>
+  `;
+  document.getElementById('gebouwen-lijst').appendChild(div);
+}
+
+// ===== DYNAMIC: VERHARDINGEN =====
+function addVerharding() {
+  verhardingCount++;
+  const id = verhardingCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `verharding-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>Verhardingszone ${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Verhardingszone</label><input type="text" class="verh-zone" placeholder="bv. Oprit"></div>
+      <div class="form-group"><label>Type oppervlakteverharding</label><input type="text" class="verh-type" placeholder="bv. Prefab betonplaten"></div>
+      <div class="form-group"><label>Type fundering</label><input type="text" class="verh-fundering" value="Niet gekend"></div>
+      <div class="form-group"><label>Type werken</label>
+        <select class="verh-werken"><option value="Volledige opbraak">Volledige opbraak</option><option value="Gedeeltelijke opbraak">Gedeeltelijke opbraak</option></select>
+      </div>
+      <div class="form-group"><label>Oppervlakte (m²)</label><input type="text" class="verh-opp" placeholder="bv. ± 90 m²"></div>
+      <div class="form-group"><label>Jaar van aanleg</label><input type="text" class="verh-jaar" placeholder="bv. ± 1985"></div>
+    </div>
+  `;
+  document.getElementById('verhardingen-lijst').appendChild(div);
+}
+
+// ===== DYNAMIC: INVENTARIS =====
+function addInventarisItem() {
+  inventarisCount++;
+  const id = inventarisCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `inventaris-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>Materiaal ${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Gebouw</label><input type="text" class="inv-gebouw" placeholder="bv. Kantoorruimte"></div>
+      <div class="form-group"><label>Lokaal</label><input type="text" class="inv-lokaal" placeholder="bv. toilet"></div>
+      <div class="form-group"><label>Onderdeel</label><input type="text" class="inv-onderdeel" placeholder="bv. WC"></div>
+      <div class="form-group"><label>Materiaal (type toepassing)</label><input type="text" class="inv-materiaal" placeholder="bv. Toepassing bakeliet"></div>
+      <div class="form-group"><label>Benaming afvalstof</label><input type="text" class="inv-afvalstof" placeholder="bv. AEEA – apparatuur die asbest bevat"></div>
+      <div class="form-group"><label>EURAL-code</label><input type="text" class="inv-eural" placeholder="bv. 17 06 03*"></div>
+      <div class="form-group"><label>Aantal</label><input type="text" class="inv-aantal" placeholder="bv. 1"></div>
+      <div class="form-group"><label>Oppervlakte/lm</label><input type="text" class="inv-opp" placeholder="bv. 23 m²"></div>
+      <div class="form-group"><label>Volume (m³)</label><input type="text" class="inv-volume" placeholder=""></div>
+      <div class="form-group"><label>Massa (ton)</label><input type="text" class="inv-massa" placeholder="bv. 0,02"></div>
+      <div class="form-group"><label>Categorie</label>
+        <select class="inv-categorie">
+          <option value="asbest">Asbesthoudend (Bijlage 2a)</option>
+          <option value="gevaarlijk">Overig gevaarlijk (Bijlage 2b)</option>
+          <option value="niet-gevaarlijk">Niet-gevaarlijk (Bijlage 2c)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>3-delige code (indien asbest)</label><input type="text" class="inv-code" placeholder="bv. 1.1.1"></div>
+      <div class="form-group full"><label>Opmerkingen</label><input type="text" class="inv-opm" placeholder=""></div>
+    </div>
+  `;
+  document.getElementById('inventaris-lijst').appendChild(div);
+}
+
+// ===== DYNAMIC: MATERIAALFICHES (asbest) =====
+function addMateriaalfiche() {
+  materiaalficheCount++;
+  const id = materiaalficheCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `fiche-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>Materiaal ${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-group full" style="margin-bottom:12px;">
+      <label>Foto('s) materiaal</label>
+      <div class="image-upload" onclick="this.querySelector('input').click()">
+        <input type="file" class="fiche-foto" accept="image/*" multiple>
+        <span>Klik om foto('s) te uploaden</span>
+        <div class="image-preview"></div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Type toepassing</label><input type="text" class="fiche-toepassing" placeholder="bv. Kit glas – schrijnwerk"></div>
+      <div class="form-group"><label>Locatie</label><input type="text" class="fiche-locatie" placeholder="bv. Ramen – divers"></div>
+      <div class="form-group"><label>Hoeveelheid</label><input type="text" class="fiche-hoeveelheid" placeholder="bv. ± 238 m²"></div>
+      <div class="form-group"><label>Bevestigingswijze</label>
+        <select class="fiche-bevestiging"><option value="Gesmeerd">Gesmeerd</option><option value="Gelijmd">Gelijmd</option><option value="Geschroefd">Geschroefd</option><option value="Genageld">Genageld</option><option value="Omwikkeld">Omwikkeld</option><option value="Ingebouwd">Ingebouwd</option><option value="Losliggend">Losliggend</option></select>
+      </div>
+      <div class="form-group"><label>Beoordeling toestand</label>
+        <select class="fiche-toestand"><option value="Geen schade">Geen schade</option><option value="Beschadigd">Beschadigd</option><option value="Zwaar beschadigd">Zwaar beschadigd</option></select>
+      </div>
+      <div class="form-group full"><label>Opmerkingen</label><input type="text" class="fiche-opm" placeholder=""></div>
+      <div class="form-group"><label>Asbesthoudend?</label>
+        <select class="fiche-asbest-status"><option value="Niet-asbesthoudend">Niet-asbesthoudend</option><option value="Asbesthoudend">Asbesthoudend</option><option value="Asbesthoudendheid niet gekend">Asbesthoudendheid niet gekend</option></select>
+      </div>
+      <div class="form-group"><label>Monsternummer(s)</label><input type="text" class="fiche-monster" placeholder="bv. Staal 1"></div>
+      <div class="form-group full"><label>Monsternamestrategie</label><input type="text" class="fiche-strategie" placeholder="bv. Puntmonster t.h.v raam verdiep +2"></div>
+      <div class="form-group"><label>Type asbest</label>
+        <select class="fiche-type-asbest"><option value="-">-</option><option value="Chrysotiel">Chrysotiel</option><option value="Amosiet">Amosiet</option><option value="Crocidoliet">Crocidoliet</option><option value="Chrysotiel en Amosiet">Chrysotiel en Amosiet</option></select>
+      </div>
+      <div class="form-group"><label>Gebondenheid</label>
+        <select class="fiche-gebondenheid"><option value="-">-</option><option value="Hechtgebonden">Hechtgebonden</option><option value="Semi-hechtgebonden">Semi-hechtgebonden</option><option value="Losgebonden">Losgebonden</option></select>
+      </div>
+      <div class="form-group full"><label>Blootstellingsrisico</label><input type="text" class="fiche-risico" placeholder="bv. Klein – bij juiste verwijderingstechniek"></div>
+      <div class="form-group"><label>Verwijderingswijze</label>
+        <select class="fiche-verwijdering"><option value="-">-</option><option value="Eenvoudige handelingen">Eenvoudige handelingen</option><option value="Eenvoudige handelingen met bijkomende maatregelen">Eenvoudige handelingen + maatregelen</option><option value="Couveuzezak (Glovebag)">Couveuzezak (Glovebag)</option><option value="Hermetische zone">Hermetische zone</option></select>
+      </div>
+      <div class="form-group"><label>3-delige code</label><input type="text" class="fiche-code" placeholder="bv. 1.1.1"></div>
+    </div>
+  `;
+  document.getElementById('materiaalfiches-lijst').appendChild(div);
+  // Setup image preview for this fiche
+  const fileInput = div.querySelector('.fiche-foto');
+  fileInput.addEventListener('change', function() {
+    const preview = this.closest('.image-upload').querySelector('.image-preview');
+    preview.innerHTML = '';
+    for (const file of this.files) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      preview.appendChild(img);
+    }
+  });
+}
+
+// ===== DYNAMIC: GEVAARLIJK MATERIAAL FICHES =====
+function addGevaarlijkFiche() {
+  gevaarlijkFicheCount++;
+  const id = gevaarlijkFicheCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `gevaarlijk-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>GA${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-group full" style="margin-bottom:12px;">
+      <label>Foto('s)</label>
+      <div class="image-upload" onclick="this.querySelector('input').click()">
+        <input type="file" class="gev-foto" accept="image/*" multiple>
+        <span>Klik om foto('s) te uploaden</span>
+        <div class="image-preview"></div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Type toepassing</label><input type="text" class="gev-toepassing" placeholder="bv. Stookolietank"></div>
+      <div class="form-group"><label>EURAL-code</label><input type="text" class="gev-eural" placeholder="bv. 17 02 04*"></div>
+      <div class="form-group"><label>Locatie</label><input type="text" class="gev-locatie" placeholder="bv. Stookruimte kelder"></div>
+      <div class="form-group"><label>Hoeveelheid</label><input type="text" class="gev-hoeveelheid" placeholder="bv. 1 stuk"></div>
+      <div class="form-group"><label>Bevestigingswijze</label><input type="text" class="gev-bevestiging" placeholder="bv. Losstaand"></div>
+      <div class="form-group"><label>Beoordeling toestand</label>
+        <select class="gev-toestand"><option value="Geen schade">Geen schade</option><option value="Beschadigd">Beschadigd</option></select>
+      </div>
+      <div class="form-group full"><label>Opmerkingen</label><input type="text" class="gev-opm" placeholder=""></div>
+      <div class="form-group full"><label>Advies m.b.t. verwijdering</label><input type="text" class="gev-advies" placeholder="bv. Selectieve verwijdering en inzameling"></div>
+      <div class="form-group"><label>Wijze van vaststelling</label>
+        <select class="gev-vaststelling"><option value="Geschat o.b.v. kennis van het materiaal">Geschat o.b.v. kennis</option><option value="Vastgesteld a.d.h.v. een analyse">Vastgesteld a.d.h.v. analyse</option></select>
+      </div>
+      <div class="form-group"><label>Monsternummers</label><input type="text" class="gev-monsternr" value="-"></div>
+      <div class="form-group full"><label>Monsternamestrategie</label><input type="text" class="gev-strategie" placeholder="bv. Geen staalname – visueel beoordeeld"></div>
+    </div>
+  `;
+  document.getElementById('gevaarlijk-fiches-lijst').appendChild(div);
+  const fileInput = div.querySelector('.gev-foto');
+  fileInput.addEventListener('change', function() {
+    const preview = this.closest('.image-upload').querySelector('.image-preview');
+    preview.innerHTML = '';
+    for (const file of this.files) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      preview.appendChild(img);
+    }
+  });
+}
+
+// ===== DYNAMIC: FOTOZONES =====
+function addFotozone() {
+  fotozoneCount++;
+  const id = fotozoneCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `fotozone-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>Zone ${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Zonenaam</label>
+      <input type="text" class="zone-naam" placeholder="bv. Gelijkvloers kantoorruimte">
+    </div>
+    <div class="image-upload" onclick="this.querySelector('input').click()">
+      <input type="file" class="zone-fotos" accept="image/*" multiple>
+      <span>Klik om foto's te uploaden</span>
+      <div class="image-preview"></div>
+    </div>
+  `;
+  document.getElementById('fotozones-lijst').appendChild(div);
+  const fileInput = div.querySelector('.zone-fotos');
+  fileInput.addEventListener('change', function() {
+    const preview = this.closest('.image-upload').querySelector('.image-preview');
+    preview.innerHTML = '';
+    for (const file of this.files) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      preview.appendChild(img);
+    }
+  });
+}
+
+// ===== DYNAMIC: HISTORISCH FOTO =====
+function addHistorischFoto() {
+  historischFotoCount++;
+  const id = historischFotoCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `historisch-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>Historische foto ${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Beschrijving</label>
+      <input type="text" class="hist-beschrijving" placeholder="bv. Historische luchtfoto 1971">
+    </div>
+    <div class="image-upload" onclick="this.querySelector('input').click()">
+      <input type="file" class="hist-foto" accept="image/*">
+      <span>Klik om foto te uploaden</span>
+      <div class="image-preview"></div>
+    </div>
+  `;
+  document.getElementById('historisch-fotos-lijst').appendChild(div);
+  const fileInput = div.querySelector('.hist-foto');
+  fileInput.addEventListener('change', function() {
+    const preview = this.closest('.image-upload').querySelector('.image-preview');
+    preview.innerHTML = '';
+    for (const file of this.files) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      preview.appendChild(img);
+    }
+  });
+}
+
+// ===== DYNAMIC: NIET-TOEGANKELIJKE ZONES =====
+function addNietToegankelijk() {
+  nietToegankelijkCount++;
+  const id = nietToegankelijkCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `niettoegang-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>Zone ${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Locatie</label><input type="text" class="nt-locatie" placeholder="bv. Dak gebouw nr. 57"></div>
+      <div class="form-group"><label>Motivatie</label><input type="text" class="nt-motivatie" placeholder="bv. Niet-toegankelijk (>3,5 m hoog)"></div>
+      <div class="form-group"><label>Opmerkingen</label><input type="text" class="nt-opm" placeholder=""></div>
+      <div class="form-group"><label>Extrapolatie</label><select class="nt-extrapolatie"><option value="Nee">Nee</option><option value="Ja">Ja</option></select></div>
+      <div class="form-group full"><label>Aanbevelingen</label><input type="text" class="nt-aanbeveling" placeholder="bv. Bijkomend onderzoek aangewezen voor start der werken"></div>
+    </div>
+  `;
+  document.getElementById('niet-toegankelijk-lijst').appendChild(div);
+}
+
+// ===== DYNAMIC: ASBEST OVERZICHT TOEPASSINGEN =====
+function addAsbestOverzicht() {
+  asbestOverzichtCount++;
+  const id = asbestOverzichtCount;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.id = `asbestoverzicht-${id}`;
+  div.innerHTML = `
+    <div class="item-header">
+      <h4>Toepassing ${id}</h4>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-item').remove()">Verwijder</button>
+    </div>
+    <div class="form-grid cols-3">
+      <div class="form-group"><label>Toepassing</label><input type="text" class="ao-toepassing" placeholder="bv. Pleisterwerk/crépi"></div>
+      <div class="form-group"><label>Aanwezig (ja/nee)</label><select class="ao-aanwezig"><option value="Ja">Ja</option><option value="Nee">Nee</option></select></div>
+      <div class="form-group"><label>Bemonsterd (ja/nee)</label><select class="ao-bemonsterd"><option value="Ja">Ja</option><option value="Nee">Nee</option></select></div>
+    </div>
+  `;
+  document.getElementById('asbest-toepassingen-lijst').appendChild(div);
+}
+
+// ===== IMAGE PROCESSING (EXIF + SCALING) =====
+function getExifOrientation(bytes) {
+  if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) return 1;
+  let offset = 2;
+  while (offset < bytes.length - 1) {
+    if (bytes[offset] !== 0xFF) break;
+    const marker = bytes[offset + 1];
+    if (marker === 0xE1) {
+      const len = (bytes[offset + 2] << 8) | bytes[offset + 3];
+      const exifStart = offset + 4;
+      if (bytes[exifStart] === 0x45 && bytes[exifStart+1] === 0x78 && bytes[exifStart+2] === 0x69 && bytes[exifStart+3] === 0x66) {
+        const tiffStart = exifStart + 6;
+        const littleEndian = bytes[tiffStart] === 0x49;
+        const r16 = (o) => littleEndian ? (bytes[o] | (bytes[o+1] << 8)) : ((bytes[o] << 8) | bytes[o+1]);
+        const ifdOffset = tiffStart + (littleEndian ? (bytes[tiffStart+4] | (bytes[tiffStart+5]<<8) | (bytes[tiffStart+6]<<16) | (bytes[tiffStart+7]<<24)) : ((bytes[tiffStart+4]<<24) | (bytes[tiffStart+5]<<16) | (bytes[tiffStart+6]<<8) | bytes[tiffStart+7]));
+        const entries = r16(ifdOffset);
+        for (let i = 0; i < entries; i++) {
+          const entryOff = ifdOffset + 2 + i * 12;
+          if (r16(entryOff) === 0x0112) return r16(entryOff + 8);
+        }
+      }
+      return 1;
+    }
+    if (marker === 0xDA) break;
+    const segLen = (bytes[offset + 2] << 8) | bytes[offset + 3];
+    offset += 2 + segLen;
+  }
+  return 1;
+}
+
+function processImage(dataUrl, maxW, maxH) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = function() {
+      const byteStr = atob(dataUrl.split(',')[1]);
+      const bytes = new Uint8Array(byteStr.length);
+      for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
+      const orient = getExifOrientation(bytes);
+      let sw = img.width, sh = img.height;
+      if (orient >= 5) { let tmp = sw; sw = sh; sh = tmp; }
+      let scale = Math.min(maxW / sw, maxH / sh, 1);
+      let w = Math.round(sw * scale), h = Math.round(sh * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+      switch (orient) {
+        case 2: ctx.scale(-1,1); ctx.translate(-w,0); break;
+        case 3: ctx.translate(w,h); ctx.rotate(Math.PI); break;
+        case 4: ctx.scale(1,-1); ctx.translate(0,-h); break;
+        case 5: ctx.translate(w,0); ctx.rotate(Math.PI/2); ctx.scale(1,-1); break;
+        case 6: ctx.translate(w,0); ctx.rotate(Math.PI/2); break;
+        case 7: ctx.translate(0,h); ctx.rotate(-Math.PI/2); ctx.scale(1,-1); break;
+        case 8: ctx.translate(0,h); ctx.rotate(-Math.PI/2); break;
+      }
+      if (orient >= 5) ctx.drawImage(img, 0, 0, h, w);
+      else ctx.drawImage(img, 0, 0, w, h);
+      ctx.restore();
+      canvas.toBlob(blob => {
+        blob.arrayBuffer().then(buf => {
+          resolve({ data: new Uint8Array(buf), width: w, height: h });
+        });
+      }, 'image/jpeg', 0.85);
+    };
+    img.src = dataUrl;
+  });
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+// ===== HELPER: safe query =====
+function qv(el, sel) {
+  if (!el) return '';
+  const e = el.querySelector(sel);
+  return e ? e.value : '';
+}
+
+// ===== GENERATE SOP DOCUMENT =====
+async function generateSOP() {
+  const btn = document.getElementById('btn-generate');
+  btn.textContent = 'Bezig met genereren...';
+  btn.disabled = true;
+
+  try {
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
+            Header, Footer, AlignmentType, HeadingLevel, BorderStyle, WidthType,
+            PageBreak, ShadingType, VerticalAlign, PageNumber, Tab } = docx;
+
+    const adres = document.getElementById('adres').value || 'Adres niet ingevuld';
+    const deskundigeNaam = document.getElementById('deskundige-naam').value;
+    const aanspreking = document.getElementById('deskundige-aanspreking').value;
+    const opgemaaktTe = document.getElementById('opgemaakt-te').value;
+    const datumOpmaak = document.getElementById('datum-opmaak').value;
+    const kadastraal = document.getElementById('kadastraal').value;
+    const versieNr = document.getElementById('versie-nr').value;
+    const versieDatum = document.getElementById('versie-datum').value;
+    const versieOpm = document.getElementById('versie-opm').value;
+
+    // Format date
+    let datumStr = datumOpmaak;
+    if (datumOpmaak) {
+      const d = new Date(datumOpmaak);
+      const maanden = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+      datumStr = `${d.getDate()} ${maanden[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    // ---- COLLECT DATA ----
+    const gebouwen = [];
+    for (const el of document.querySelectorAll('#gebouwen-lijst .dynamic-item')) {
+      gebouwen.push({
+        naam: qv(el, '.geb-naam'),
+        functie: qv(el, '.geb-functie'),
+        type: qv(el, '.geb-type'),
+        boven: qv(el, '.geb-boven'),
+        onder: qv(el, '.geb-onder'),
+        werkenBoven: qv(el, '.geb-werken-boven'),
+        werkenOnder: qv(el, '.geb-werken-onder'),
+        opp: qv(el, '.geb-opp'),
+        volume: qv(el, '.geb-volume'),
+        bouwjaar: qv(el, '.geb-bouwjaar'),
+        renovaties: qv(el, '.geb-renovaties'),
+      });
+    }
+
+    const verhardingen = [];
+    if (document.getElementById('buitenverharding-aanwezig').value === 'ja') {
+      for (const el of document.querySelectorAll('#verhardingen-lijst .dynamic-item')) {
+        verhardingen.push({
+          zone: qv(el, '.verh-zone'),
+          type: qv(el, '.verh-type'),
+          fundering: qv(el, '.verh-fundering'),
+          werken: qv(el, '.verh-werken'),
+          opp: qv(el, '.verh-opp'),
+          jaar: qv(el, '.verh-jaar'),
+        });
+      }
+    }
+
+    // Inventaris items
+    const inventarisItems = [];
+    for (const el of document.querySelectorAll('#inventaris-lijst .dynamic-item')) {
+      inventarisItems.push({
+        gebouw: qv(el, '.inv-gebouw'), lokaal: qv(el, '.inv-lokaal'), onderdeel: qv(el, '.inv-onderdeel'),
+        materiaal: qv(el, '.inv-materiaal'), afvalstof: qv(el, '.inv-afvalstof'), eural: qv(el, '.inv-eural'),
+        aantal: qv(el, '.inv-aantal'), opp: qv(el, '.inv-opp'), volume: qv(el, '.inv-volume'),
+        massa: qv(el, '.inv-massa'), categorie: qv(el, '.inv-categorie'), code: qv(el, '.inv-code'),
+        opm: qv(el, '.inv-opm'),
+      });
+    }
+
+    // Materiaalfiches (asbest)
+    const materiaalfiches = [];
+    for (const el of document.querySelectorAll('#materiaalfiches-lijst .dynamic-item')) {
+      const fotos = el.querySelector('.fiche-foto').files;
+      const fotoData = [];
+      for (const f of fotos) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 550, 200);
+        fotoData.push(processed);
+      }
+      materiaalfiches.push({
+        toepassing: qv(el, '.fiche-toepassing'), locatie: qv(el, '.fiche-locatie'),
+        hoeveelheid: qv(el, '.fiche-hoeveelheid'), bevestiging: qv(el, '.fiche-bevestiging'),
+        toestand: qv(el, '.fiche-toestand'), opm: qv(el, '.fiche-opm'),
+        asbestStatus: qv(el, '.fiche-asbest-status'), monster: qv(el, '.fiche-monster'),
+        strategie: qv(el, '.fiche-strategie'), typeAsbest: qv(el, '.fiche-type-asbest'),
+        gebondenheid: qv(el, '.fiche-gebondenheid'), risico: qv(el, '.fiche-risico'),
+        verwijdering: qv(el, '.fiche-verwijdering'), code: qv(el, '.fiche-code'),
+        fotos: fotoData,
+      });
+    }
+
+    // Gevaarlijke materiaal fiches
+    const gevaarlijkFiches = [];
+    for (const el of document.querySelectorAll('#gevaarlijk-fiches-lijst .dynamic-item')) {
+      const fotos = el.querySelector('.gev-foto').files;
+      const fotoData = [];
+      for (const f of fotos) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 550, 200);
+        fotoData.push(processed);
+      }
+      gevaarlijkFiches.push({
+        toepassing: qv(el, '.gev-toepassing'), eural: qv(el, '.gev-eural'),
+        locatie: qv(el, '.gev-locatie'), hoeveelheid: qv(el, '.gev-hoeveelheid'),
+        bevestiging: qv(el, '.gev-bevestiging'), toestand: qv(el, '.gev-toestand'),
+        opm: qv(el, '.gev-opm'), advies: qv(el, '.gev-advies'),
+        vaststelling: qv(el, '.gev-vaststelling'), monsternr: qv(el, '.gev-monsternr'),
+        strategie: qv(el, '.gev-strategie'), fotos: fotoData,
+      });
+    }
+
+    // Foto zones
+    const fotozones = [];
+    for (const el of document.querySelectorAll('#fotozones-lijst .dynamic-item')) {
+      const naam = qv(el, '.zone-naam');
+      const fotos = el.querySelector('.zone-fotos').files;
+      const fotoData = [];
+      for (const f of fotos) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 550, 200);
+        fotoData.push(processed);
+      }
+      fotozones.push({ naam, fotos: fotoData });
+    }
+
+    // Historische foto's
+    const historischFotos = [];
+    for (const el of document.querySelectorAll('#historisch-fotos-lijst .dynamic-item')) {
+      const beschrijving = qv(el, '.hist-beschrijving');
+      const fileInput = el.querySelector('.hist-foto');
+      let fotoData = null;
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        const dataUrl = await readFileAsDataUrl(fileInput.files[0]);
+        fotoData = await processImage(dataUrl, 500, 400);
+      }
+      historischFotos.push({ beschrijving, foto: fotoData });
+    }
+
+    // Niet-toegankelijke zones
+    const nietToegankelijkZones = [];
+    if (document.getElementById('niet-toegankelijk').value === 'wel') {
+      for (const el of document.querySelectorAll('#niet-toegankelijk-lijst .dynamic-item')) {
+        nietToegankelijkZones.push({
+          locatie: qv(el, '.nt-locatie'), motivatie: qv(el, '.nt-motivatie'),
+          opm: qv(el, '.nt-opm'), extrapolatie: qv(el, '.nt-extrapolatie'),
+          aanbeveling: qv(el, '.nt-aanbeveling'),
+        });
+      }
+    }
+
+    // Process voorblad foto
+    let voorblad = null;
+    const vbInput = document.getElementById('foto-voorblad');
+    if (vbInput.files && vbInput.files[0]) {
+      const dataUrl = await readFileAsDataUrl(vbInput.files[0]);
+      voorblad = await processImage(dataUrl, 550, 400);
+    }
+
+    // Process situering plannen
+    const situeringPlannen = [];
+    const sitInput = document.getElementById('plan-situering');
+    if (sitInput.files) {
+      for (const f of sitInput.files) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 550, 700);
+        situeringPlannen.push(processed);
+      }
+    }
+
+    // Process geoloket screenshot
+    let geoloketImg = null;
+    const geoInput = document.getElementById('geoloket-screenshot');
+    if (geoInput.files && geoInput.files[0]) {
+      const dataUrl = await readFileAsDataUrl(geoInput.files[0]);
+      geoloketImg = await processImage(dataUrl, 500, 400);
+    }
+
+    // Process PFAS screenshot
+    let pfasImg = null;
+    const pfasInput = document.getElementById('pfas-screenshot');
+    if (pfasInput.files && pfasInput.files[0]) {
+      const dataUrl = await readFileAsDataUrl(pfasInput.files[0]);
+      pfasImg = await processImage(dataUrl, 500, 350);
+    }
+
+    // Bouwplannen
+    const bouwplannenImgs = [];
+    const bpInput = document.getElementById('bouwplannen-fotos');
+    if (bpInput.files) {
+      for (const f of bpInput.files) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 700, 500);
+        bouwplannenImgs.push(processed);
+      }
+    }
+
+    // Verharding fotos
+    const verhardingImgs = [];
+    const vhInput = document.getElementById('verharding-fotos');
+    if (vhInput.files) {
+      for (const f of vhInput.files) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 280, 210);
+        verhardingImgs.push(processed);
+      }
+    }
+
+    // ---- HELPER FUNCTIONS ----
+    const FONT = 'Calibri';
+    const mkP = (text, opts = {}) => new Paragraph({
+      children: [new TextRun({ text, font: FONT, size: opts.size || 22, bold: opts.bold, italics: opts.italics, color: opts.color })],
+      alignment: opts.align || AlignmentType.LEFT,
+      spacing: { after: opts.after !== undefined ? opts.after : 120 },
+      ...(opts.heading ? { heading: opts.heading } : {}),
+    });
+    const mkRun = (text, opts = {}) => new TextRun({ text, font: FONT, size: opts.size || 22, bold: opts.bold, italics: opts.italics, color: opts.color });
+    const mkCell = (text, opts = {}) => new TableCell({
+      children: [new Paragraph({ children: [mkRun(text, { bold: opts.bold, italics: opts.italics, size: opts.size || 20 })], alignment: opts.align })],
+      width: opts.width ? { size: opts.width, type: WidthType.DXA } : undefined,
+      shading: opts.shading ? { type: ShadingType.CLEAR, fill: opts.shading } : undefined,
+      verticalAlign: VerticalAlign.CENTER,
+    });
+    const mkRow = (cells) => new TableRow({ children: cells });
+
+    // ---- BUILD SECTIONS ----
+    const children = [];
+
+    // === VOORBLAD ===
+    if (voorblad) {
+      children.push(new Paragraph({
+        children: [new ImageRun({ data: voorblad.data, transformation: { width: voorblad.width * 0.75, height: voorblad.height * 0.75 } })],
+        alignment: AlignmentType.CENTER, spacing: { after: 200 },
+      }));
+    }
+    children.push(new Paragraph({ children: [mkRun(adres, { bold: true, size: 28 })], alignment: AlignmentType.CENTER, spacing: { after: 400 } }));
+    children.push(mkP(`Ik, ondergetekende, ${aanspreking} ${deskundigeNaam}, verklaar dat de in dit sloopopvolgingsplan opgenomen informatie volledig en correct is.`, { italics: false }));
+    children.push(mkP(`Opgemaakt te ${opgemaaktTe}, op ${datumStr}.`));
+    children.push(mkP('Handtekening van de sloopdeskundige:', { after: 600 }));
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+
+    // === 1. ADMINISTRATIEVE GEGEVENS ===
+    children.push(mkP('Administratieve gegevens', { heading: HeadingLevel.HEADING_1, bold: true }));
+    children.push(mkP('Situering project (locatie van de werf)', { bold: true }));
+    children.push(mkP(adres));
+    children.push(mkP('Kadastrale gegevens', { bold: true }));
+    children.push(mkP(kadastraal || 'Niet ingevuld'));
+    children.push(mkP('Bijlage 1: plan met situering project', { bold: true }));
+
+    for (const plan of situeringPlannen) {
+      children.push(new Paragraph({
+        children: [new ImageRun({ data: plan.data, transformation: { width: plan.width * 0.75, height: plan.height * 0.75 } })],
+        alignment: AlignmentType.CENTER, spacing: { after: 100 },
+      }));
+    }
+
+    // Versiebeheer tabel
+    children.push(new Table({
+      rows: [
+        mkRow([mkCell('Versiebeheer van het sloopopvolgingsplan', { bold: true }), mkCell(''), mkCell('')]),
+        mkRow([mkCell('Versienummer', { bold: true }), mkCell('Datum', { bold: true }), mkCell('Opmerkingen', { bold: true })]),
+        mkRow([mkCell(versieNr, { italics: true }), mkCell(versieDatum, { italics: true }), mkCell(versieOpm, { italics: true })]),
+      ],
+      width: { size: 9000, type: WidthType.DXA },
+    }));
+    children.push(mkP('* De geldigheidstermijn van de conformverklaring van een sloopopvolgingsplan bedraagt 2 jaar.', { size: 18, italics: true, after: 200 }));
+
+    // === 2. VOORSTUDIE ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Voorstudie', { heading: HeadingLevel.HEADING_1, bold: true }));
+    children.push(mkP('Beschrijving van het project', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP('Gebouwen en gebouwdelen', { heading: HeadingLevel.HEADING_3 }));
+
+    const projectBeschrijving = document.getElementById('project-beschrijving').value;
+    if (projectBeschrijving) children.push(mkP(projectBeschrijving, { italics: true }));
+
+    // Gebouw tabellen
+    for (const g of gebouwen) {
+      const rows = [];
+      if (g.naam) rows.push(mkRow([mkCell('Gebouwnaam', { bold: true }), mkCell(g.naam, { italics: true }), mkCell('')]));
+      rows.push(mkRow([mkCell('Omschrijving/functie', { bold: true }), mkCell(g.functie, { italics: true }), mkCell('')]));
+      rows.push(mkRow([mkCell('Type constructie', { bold: true }), mkCell(g.type, { italics: true }), mkCell('')]));
+      rows.push(mkRow([mkCell('Aantal bouwlagen', { bold: true }), mkCell('Bovengronds', { bold: true }), mkCell(g.boven, { italics: true })]));
+      rows.push(mkRow([mkCell('', {}), mkCell('Ondergronds', { bold: true }), mkCell(g.onder, { italics: true })]));
+      rows.push(mkRow([mkCell('Type werken', { bold: true }), mkCell('Bovenbouw', { bold: true }), mkCell(g.werkenBoven, { italics: true })]));
+      rows.push(mkRow([mkCell('', {}), mkCell('Onderbouw (fundering/kelder)*', { bold: true }), mkCell(g.werkenOnder, { italics: true })]));
+      rows.push(mkRow([mkCell('Bruto bruikbare opp. (m²)', { bold: true }), mkCell(g.opp, { italics: true }), mkCell('')]));
+      rows.push(mkRow([mkCell('Bouwvolume (m³)', { bold: true }), mkCell(g.volume, { italics: true }), mkCell('')]));
+      children.push(new Table({ rows, width: { size: 9000, type: WidthType.DXA } }));
+      children.push(mkP(''));
+    }
+
+    // Totalen
+    if (gebouwen.length > 0) {
+      const totOpp = gebouwen.map(g => g.opp).filter(Boolean).join(' + ');
+      const totVol = gebouwen.map(g => g.volume).filter(Boolean).join(' + ');
+      children.push(new Table({
+        rows: [
+          mkRow([mkCell('Totale bruto bruikbare oppervlakte (m²)', { bold: true }), mkCell(totOpp || gebouwen[0].opp, { italics: true }), mkCell('')]),
+          mkRow([mkCell('Totaal bouwvolume (m³)', { bold: true }), mkCell(totVol || gebouwen[0].volume, { italics: true }), mkCell('')]),
+          mkRow([mkCell('Historiek', { bold: true }), mkCell('Bouwjaar', { bold: true }), mkCell(gebouwen[0].bouwjaar || 'Onbekend', { italics: true })]),
+          mkRow([mkCell('', {}), mkCell('Renovaties', { bold: true }), mkCell(gebouwen[0].renovaties || 'Onbekend', { italics: true })]),
+        ],
+        width: { size: 9000, type: WidthType.DXA },
+      }));
+    }
+
+    // Buitenverhardingen
+    children.push(mkP('Buitenverhardingen', { heading: HeadingLevel.HEADING_3 }));
+    if (document.getElementById('buitenverharding-aanwezig').value === 'ja') {
+      children.push(mkP('☒ Er is buitenverharding aanwezig. De (gedeeltelijke) opbraak ervan behoort tot de scope van voorliggend SOP.'));
+      for (const v of verhardingen) {
+        children.push(new Table({
+          rows: [
+            mkRow([mkCell('Verhardingszone', { bold: true }), mkCell(v.zone, { italics: true }), mkCell('')]),
+            mkRow([mkCell('Type oppervlakteverharding', { bold: true }), mkCell(v.type, { italics: true }), mkCell('')]),
+            mkRow([mkCell('Type fundering (indien van toepassing)', { bold: true }), mkCell(v.fundering, { italics: true }), mkCell('')]),
+            mkRow([mkCell('Type werken', { bold: true }), mkCell(v.werken, { italics: true }), mkCell('')]),
+            mkRow([mkCell('Oppervlakte (m²)', { bold: true }), mkCell(v.opp, { italics: true }), mkCell('')]),
+            mkRow([mkCell('Totale oppervlakte (m²)', { bold: true }), mkCell(v.opp, { italics: true }), mkCell('')]),
+            mkRow([mkCell('Historiek', { bold: true }), mkCell('Jaar van aanleg', { bold: true }), mkCell(v.jaar, { italics: true })]),
+          ],
+          width: { size: 9000, type: WidthType.DXA },
+        }));
+        children.push(mkP(''));
+      }
+    } else {
+      children.push(mkP('☒ Er is geen buitenverharding aanwezig en/of de opbraak behoort niet tot de scope van voorliggend SOP.'));
+    }
+
+    // Voorbereidend onderzoek
+    children.push(mkP('Voorbereidend (historisch) onderzoek', { heading: HeadingLevel.HEADING_2 }));
+
+    // Bedrijfsactiviteiten
+    children.push(mkP('Bedrijfsactiviteiten en vergunningen', { heading: HeadingLevel.HEADING_3 }));
+    const bedrSel = document.getElementById('bedrijfsactiviteiten').value;
+    if (bedrSel === 'geen') {
+      children.push(mkP('☒ Er werd door de initiatiefnemer of opdrachtgever geen informatie ter beschikking gesteld m.b.t. de bedrijfsactiviteiten en/of er zijn geen bedrijfsactiviteiten van toepassing.'));
+    } else {
+      children.push(mkP('☒ Er werd informatie ter beschikking gesteld m.b.t. de bedrijfsactiviteiten.'));
+    }
+
+    // Bouwplannen
+    children.push(mkP('Bouwplannen en bestekken', { heading: HeadingLevel.HEADING_3 }));
+    const bpSel = document.getElementById('bouwplannen').value;
+    if (bpSel === 'wel') {
+      children.push(mkP('☒ Er zijn bestaande (oude) plannen of bestekken door de initiatiefnemer of opdrachtgever ter beschikking gesteld. Indien er plannen of bestekken beschikbaar zijn, worden deze in Bijlage 6b toegevoegd.'));
+    } else {
+      children.push(mkP('☒ Er zijn geen bestaande plannen of bestekken beschikbaar of overgemaakt door de initiatiefnemer of opdrachtgever.'));
+    }
+
+    // Fotomateriaal
+    children.push(mkP('Fotomateriaal', { heading: HeadingLevel.HEADING_3 }));
+    children.push(mkP("De foto's van de historische situatie worden toegevoegd in Bijlage 6c."));
+
+    // Bestaande asbestinventaris
+    children.push(mkP('Bestaande asbestinventaris(sen)', { heading: HeadingLevel.HEADING_3 }));
+    const asbestSel = document.getElementById('bestaande-asbest').value;
+    if (asbestSel === 'geen') {
+      children.push(mkP('☒ Er is/zijn geen bestaande asbestinventaris(sen) beschikbaar of overgemaakt door de initiatiefnemer of opdrachtgever en/of de bestaande asbestinventaris(sen) werd(en) als niet relevant beschouwd door de sloopdeskundige.'));
+    } else if (asbestSel === 'ovam') {
+      children.push(mkP('☒ Er is een bestaande OVAM asbestinventaris beschikbaar of overgemaakt door de initiatiefnemer of opdrachtgever.'));
+    } else {
+      children.push(mkP('☒ Er is een bestaande asbestinventaris beschikbaar of overgemaakt door de initiatiefnemer of opdrachtgever.'));
+    }
+
+    // Bestaande sloopinventaris
+    children.push(mkP('Bestaande sloopinventaris(sen)', { heading: HeadingLevel.HEADING_3 }));
+    const sloopSel = document.getElementById('bestaande-sloop').value;
+    if (sloopSel === 'geen') {
+      children.push(mkP('☒ Er is/zijn geen bestaande sloopinventaris(sen) beschikbaar of overgemaakt door de initiatiefnemer of opdrachtgever en/of de bestaande sloopinventaris(sen) werd(en) als niet relevant beschouwd door de sloopdeskundige.'));
+    } else {
+      children.push(mkP('☒ Er is een bestaande sloopinventaris beschikbaar of overgemaakt door de initiatiefnemer of opdrachtgever.'));
+    }
+
+    // Bodemonderzoek
+    children.push(mkP('Bodemonderzoek(en) en/of technisch verslag', { heading: HeadingLevel.HEADING_3 }));
+    children.push(mkP('Bodemonderzoek(en)', { heading: HeadingLevel.HEADING_4 || HeadingLevel.HEADING_3 }));
+    const geoDate = document.getElementById('geoloket-datum').value;
+    const bodemStatus = document.getElementById('bodem-status').value;
+    if (bodemStatus === 'geen-dossiers') {
+      children.push(mkP(`☒ De bodemverkenner en/of het OVAM Geoloket werd nagekeken op ${geoDate}. Er zijn bij OVAM geen opdrachten of dossiers gekend voor deze grond.`));
+    } else {
+      children.push(mkP(`☒ De bodemverkenner en/of het OVAM Geoloket werd nagekeken op ${geoDate}. Er is een volledige/gedeeltelijke overlap met één of meerdere uitgevoerde bodemonderzoeken.`));
+    }
+
+    const bodemBeschikbaar = document.getElementById('bodem-beschikbaar').value;
+    if (bodemBeschikbaar === 'geen') {
+      children.push(mkP('☒ Er werd(en) geen bodemonderzoek(en) door de initiatiefnemer/opdrachtgever ter beschikking gesteld. Er is onvoldoende informatie beschikbaar om te besluiten of de conclusies een invloed hebben op de kwaliteit/indeling van de puinstromen opgenomen in voorliggend SOP.'));
+    }
+
+    const bodemConclusie = document.getElementById('bodem-conclusie').value;
+    if (bodemConclusie) {
+      children.push(new Paragraph({
+        children: [mkRun('Conclusie: ', { bold: true }), mkRun(bodemConclusie, { italics: true })],
+        spacing: { after: 120 },
+      }));
+    }
+
+    if (geoloketImg) {
+      children.push(new Paragraph({
+        children: [new ImageRun({ data: geoloketImg.data, transformation: { width: geoloketImg.width * 0.75, height: geoloketImg.height * 0.75 } })],
+        alignment: AlignmentType.CENTER, spacing: { after: 200 },
+      }));
+    }
+
+    // Technisch verslag
+    children.push(mkP('Technisch verslag', { heading: HeadingLevel.HEADING_4 || HeadingLevel.HEADING_3 }));
+    const tvSel = document.getElementById('technisch-verslag').value;
+    children.push(mkP(tvSel === 'geen' ? '☒ Er is geen technisch verslag beschikbaar of overgemaakt door de initiatiefnemer of opdrachtgever.' : '☒ Er is een technisch verslag beschikbaar.'));
+
+    // PFAS
+    children.push(mkP('PFAS', { heading: HeadingLevel.HEADING_4 || HeadingLevel.HEADING_3 }));
+    const pfasSel = document.getElementById('pfas-status').value;
+    const pfasDate = document.getElementById('pfas-datum').value;
+    if (pfasSel === 'geen-overlap') {
+      children.push(mkP(`☒ O.b.v. het nazicht van Databank Ondergrond Vlaanderen op ${pfasDate} overlapt de projectzone niet met een potentiële bronzone voor PFAS, hebben er geen risico-activiteiten plaatsgevonden op de onderzoekslocatie en zijn er geen relevante onderzoeksresultaten voor PFAS in de bodem gekend.`));
+    } else {
+      children.push(mkP(`☒ O.b.v. het nazicht van Databank Ondergrond Vlaanderen op ${pfasDate} overlapt de projectzone met een potentiële bronzone voor PFAS.`));
+    }
+    if (pfasImg) {
+      children.push(new Paragraph({
+        children: [new ImageRun({ data: pfasImg.data, transformation: { width: pfasImg.width * 0.75, height: pfasImg.height * 0.75 } })],
+        alignment: AlignmentType.CENTER, spacing: { after: 200 },
+      }));
+    }
+
+    // Regiogebonden risico's
+    children.push(mkP("Regiogebonden risico's", { heading: HeadingLevel.HEADING_3 }));
+    const regioSel = document.getElementById('regio-risico').value;
+    children.push(mkP(regioSel === 'geen'
+      ? "☒ De projectzone is niet gelegen t.h.v. een locatie die behoort tot een van de regiogebonden risico's."
+      : "☒ De projectzone is gelegen t.h.v. een locatie die behoort tot regiogebonden risico's."));
+
+    // === 3. VELDONDERZOEK ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Veldonderzoek', { heading: HeadingLevel.HEADING_1, bold: true }));
+    children.push(mkP('Administratieve gegevens van het veldonderzoek', { heading: HeadingLevel.HEADING_2 }));
+    const datumPB = document.getElementById('datum-plaatsbezoek').value;
+    if (datumPB) children.push(mkP(`Datum plaatsbezoek: ${datumPB}`));
+
+    // Asbest
+    children.push(mkP('Veldonderzoek gebouwen', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP('Onderzoek naar asbest', { heading: HeadingLevel.HEADING_3 }));
+    const asbestGevonden = document.getElementById('asbest-gevonden').value;
+    const driedeligeCode = document.getElementById('driedelige-code').value;
+    if (asbestGevonden === 'ja') {
+      children.push(mkP(`☒ Er werden asbesthoudende toepassingen teruggevonden tijdens het veldonderzoek. De samenvattende 3-delige code voor asbest* is ${driedeligeCode}.`));
+      const verwDoor = document.getElementById('verwijdering-door').value;
+      children.push(mkP(verwDoor === 'opgeleid'
+        ? '☒ De volledige asbestverwijdering kan worden uitgevoerd door opgeleid personeel.'
+        : '☒ De asbestverwijdering dient te worden uitgevoerd door een erkende asbestverwijderaar.'));
+    } else {
+      children.push(mkP('☒ Er werden geen asbesthoudende toepassingen teruggevonden tijdens het veldonderzoek.'));
+    }
+    children.push(mkP('Een overzicht van de monstername, analyse en de beschrijvende fiches van de asbestverdachte en asbesthoudende materialen zijn opgenomen in de destructieve asbestinventaris in Bijlage 3.'));
+
+    // Gevaarlijke materialen
+    children.push(mkP('Onderzoek naar potentieel gevaarlijke materialen andere dan asbest', { heading: HeadingLevel.HEADING_3 }));
+    const gevGevonden = document.getElementById('gevaarlijk-gevonden').value;
+    children.push(mkP(gevGevonden === 'ja'
+      ? '☒ Er werden potentieel gevaarlijke materialen andere dan asbest teruggevonden tijdens het veldonderzoek.'
+      : '☒ Er werden geen potentieel gevaarlijke materialen andere dan asbest teruggevonden.'));
+    const gevMonster = document.getElementById('gevaarlijk-monsternames').value;
+    children.push(mkP(gevMonster === 'geen'
+      ? '☒ Er zijn geen monsternames en/of analyses van potentieel gevaarlijke materialen andere dan asbest uitgevoerd t.h.v. de projectzone.'
+      : '☒ Er zijn monsternames en/of analyses uitgevoerd van potentieel gevaarlijke materialen.'));
+    children.push(mkP('De beschrijvende fiches, een overzicht van de (potentieel) gevaarlijke materialen en, indien van toepassing, de bijhorende monstername en analyseverslagen zijn opgenomen in Bijlage 4.'));
+
+    // Buitenomgeving
+    children.push(mkP('Veldonderzoek buitenomgeving', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP('Vaststellingen veldonderzoek', { heading: HeadingLevel.HEADING_3 }));
+    const buitenVast = document.getElementById('buiten-vaststellingen').value;
+    children.push(mkP(buitenVast === 'geen'
+      ? '☒ Er werden tijdens het veldonderzoek van de buitenomgeving geen bijzondere zaken vastgesteld die eventueel aanleiding kunnen geven tot bepaalde risico\'s (bijv. aandachtsstromen).'
+      : '☒ Er werden bijzondere zaken vastgesteld tijdens het veldonderzoek van de buitenomgeving.'));
+    children.push(mkP('Kernboringen buitenomgeving', { heading: HeadingLevel.HEADING_3 }));
+    children.push(mkP(document.getElementById('buiten-kernboringen').value === 'geen'
+      ? '☒ Er zijn geen kernboringen uitgevoerd t.h.v. de projectzone.'
+      : '☒ Er zijn kernboringen uitgevoerd t.h.v. de projectzone.'));
+    children.push(mkP('Uitgevoerde monsternames en analyses', { heading: HeadingLevel.HEADING_3 }));
+    children.push(mkP(document.getElementById('buiten-monsternames').value === 'geen'
+      ? '☒ Er zijn geen monsternames en/of analyses van de buitenomgeving uitgevoerd t.h.v. de projectzone.'
+      : '☒ Er zijn monsternames en/of analyses van de buitenomgeving uitgevoerd.'));
+
+    // === BEPERKINGEN ===
+    children.push(mkP('Beperkingen van het veldonderzoek', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP('Algemene beperkingen', { heading: HeadingLevel.HEADING_3 }));
+    children.push(mkP(`Deze inventaris heeft betrekking op de af te breken bebouwing gelegen op de ${adres}. Hoewel er de intentie is om alle materialen op te sporen, kan nooit 100 % zekerheid worden gegeven dat al het gevaarlijk en niet-gevaarlijk materiaal in deze inventaris is beschreven.`));
+    children.push(mkP('Volgende zaken kunnen tijdens de sloop of ontmantelingswerken zichtbaar worden zoals:'));
+    const beperkingen = [
+      'Plafondconstructies: niet elke opbouw van een plafondconstructie is duidelijk te herkennen, het kan zijn dat er nog bepaalde materialen in de plafondconstructies aanwezig zijn zonder dat dit zichtbaar is.',
+      'Toestellen: de toestellen waarbij men kan vermoeden dat er eventueel asbest zou kunnen voorkomen (voornamelijk toestellen die verwarmen), werden nader bekeken en zijn in dit rapport opgenomen. Géén enkel toestel werd gedemonteerd, daarom is deze beschrijving niet volledig en kan er op andere plaatsen inwendig nog asbestmateriaal voorkomen.',
+      'Leidingen en Kabels: deze sloopinventaris houdt géén rekening met leidingen en kabels (in- of opbouw) die zich in de gebouwen bevinden.',
+      'Materialen in opslag: losliggende materialen zoals inboedel werden niet opgenomen in de sloopinventaris.',
+    ];
+    for (const b of beperkingen) {
+      children.push(new Paragraph({
+        children: [mkRun('• ', { bold: true }), mkRun(b)],
+        spacing: { after: 80 },
+      }));
+    }
+
+    // Projectspecifieke beperkingen
+    children.push(mkP('Projectspecifieke beperkingen', { heading: HeadingLevel.HEADING_3 }));
+    children.push(mkP('Niet-toegankelijke en/of niet-onderzochte ruimtes en/of gebouwen/gebouwdelen', { bold: true }));
+    if (nietToegankelijkZones.length > 0) {
+      children.push(mkP('☒ Er zijn ruimtes en/of gebouwen/gebouwdelen die niet toegankelijk waren en niet destructief onderzocht konden worden.'));
+      const ntRows = [mkRow([
+        mkCell('Locatie', { bold: true }), mkCell('Motivatie', { bold: true }),
+        mkCell('Opmerkingen', { bold: true }), mkCell('Extrapolatie', { bold: true }),
+        mkCell('Aanbevelingen', { bold: true }),
+      ])];
+      for (const nt of nietToegankelijkZones) {
+        ntRows.push(mkRow([
+          mkCell(nt.locatie, { italics: true }), mkCell(nt.motivatie, { italics: true }),
+          mkCell(nt.opm, { italics: true }), mkCell(nt.extrapolatie, { italics: true }),
+          mkCell(nt.aanbeveling, { italics: true }),
+        ]));
+      }
+      children.push(new Table({ rows: ntRows, width: { size: 9000, type: WidthType.DXA } }));
+    } else {
+      children.push(mkP('☒ Er zijn geen ruimtes en/of gebouwen/gebouwdelen die niet toegankelijk waren en niet destructief onderzocht konden worden.'));
+    }
+
+    // Hergebruik
+    children.push(mkP('Hergebruik en hoogwaardige recyclage', { heading: HeadingLevel.HEADING_3 }));
+    const hergebruikSel = document.getElementById('hergebruik').value;
+    children.push(mkP(hergebruikSel === 'geen'
+      ? '☒ Er werd bij de uitvoering van het veldonderzoek geen inschatting gemaakt van materialen en elementen die in aanmerking komen voor hergebruik en/of hoogwaardige recyclage.'
+      : '☒ Er werden materialen en elementen geïdentificeerd die in aanmerking komen voor hergebruik en/of hoogwaardige recyclage.'));
+
+    // === 4. AANBEVELINGEN ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Aanbevelingen en aandachtspunten m.b.t. sloopopvolging', { heading: HeadingLevel.HEADING_1, bold: true }));
+    children.push(mkP('Algemene aanbevelingen en aandachtspunten', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP('ALGEMENE AANDACHTSPUNTEN', { bold: true }));
+
+    const aanbGroepen = [
+      { titel: 'Aanbevelingen organisatorische voorzorgsmaatregelen:', items: [
+        'Het vastleggen van duidelijke afspraken met de bouwheer over de toegankelijkheid en de beveiliging van de gebouwen en terreinen.',
+        'Permanente mogelijkheid tot verbinding met de buitenwereld via gsm.',
+        'De opmaak van een duidelijke werkopdracht met de contactgegevens van de opdrachtgever en eventuele andere personen die op de hoogte zijn van de situatie op het terrein.',
+      ]},
+      { titel: 'Aanbevelingen persoonlijke beschermingsmiddelen - EHBO:', items: [
+        'Veiligheidsschoenen of -laarzen', 'Fluo-vestjes tijdens werkzaamheden', 'Veiligheidshelm',
+        'Stofmasker en veiligheidsbril', 'Aangepaste handschoenen', 'Beschermde kledij', 'EHBO-Kit',
+      ]},
+      { titel: 'Veiligheidsmaatregelen in het kader van verwijderingstechniek asbesthoudende/gevaarlijke materialen:', items: [
+        'De werknemer draagt het nodige materiaal voor ademhalingsbescherming en een beschermde wegwerpoveral.',
+        'Om de verspreiding van vezels te beperken en afhankelijk van hun aard, worden, indien nodig, de materialen nat gemaakt, voorafgaand de verwijdering.',
+        'De gereedschappen voor verwijdering moeten handgereedschappen zijn en dienen voor éénmalig gebruik of ze moeten worden schoongemaakt om kruisbesmetting te voorkomen.',
+        'De aannemer ziet toe dat personen die niet aanwezig moeten zijn bij de verwijdering, op een afstand worden gehouden.',
+        'De aannemer voert de werken uit met vereiste attesten / erkenningen en volgens de van toepassing zijnde wetgeving.',
+      ]},
+      { titel: 'Aanbevelingen inzake maatregelen selectieve sloop-, renovatie- of ontmantelingswerken:', items: [
+        'Indien vóór of tijdens de uitvoering van de werken nieuwe, belangrijke informatie over de sloop- en opbraakmaterialen aan het licht komt OF indien blijkt dat de scope van het project niet (volledig) overeenstemt met het sloopopvolgingsplan, dient de uitvoerder van de werken dit onmiddellijk te melden aan Tracimat, de initiatiefnemer, en (indien van toepassing) de deskundige.',
+        'Ledigen en reinigen van recipiënten (stookolietanks, ketels,...) voorafgaand aan de verwijdering.',
+        'De dakgoten van de gebouwen met een asbesthoudende dakbedekking dienen gereinigd te worden. Het hierbij vrijgekomen afval dient als asbesthoudend afval te worden behandeld. Niet gereinigde dakgoten worden als asbesthoudend afval behandeld.',
+        'Steenachtige materialen afkomstig van de sloop van schouwen kunnen enkel als LMRP materiaal worden afgevoerd en verwerkt indien de schouwen voorafgaand aan de sloop gereinigd werden.',
+      ]},
+    ];
+
+    for (const g of aanbGroepen) {
+      children.push(mkP(g.titel, { italics: true, bold: false }));
+      for (const item of g.items) {
+        children.push(new Paragraph({
+          children: [mkRun('• ', {}), mkRun(item, { italics: true })],
+          spacing: { after: 60 },
+        }));
+      }
+    }
+
+    // Projectspecifieke aanbevelingen
+    children.push(mkP('Projectspecifieke aanbevelingen en aandachtspunten', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP('PROJECTSPECIFIEKE AANBEVELINGEN:', { bold: true }));
+
+    const projAanb = [
+      { titel: 'Verplicht te scheiden fracties:', items: [
+        'Asbesthoudende materialen voorafgaand aan de afbraak',
+        'Afvalstromen voor recyclage (glas, metaal, gipshoudende materialen, steenpuin, ...)',
+        'Kwikhoudende materialen', 'Gevaarlijke materialen', 'Elektrische toestellen (AEEA)',
+      ]},
+      { titel: 'Verplichting stopmomenten:', items: [
+        'Het is verplicht een stopmoment in te lassen bij ontdekken van asbesthoudende materialen en gevaarlijke materialen.',
+      ]},
+      { titel: 'Aanbevelingen betreffende asbesthoudende materialen:', items: [
+        'Het verwijderen van de asbesthoudende materialen voor aanvang van de werken.',
+        'De dakgoten van de gebouwen met een asbesthoudende dakbedekking dienen gereinigd te worden. Het hierbij vrijkomend afval dient als asbesthoudend afval te worden behandeld. Niet gereinigde dakgoten worden als asbesthoudend afval behandeld.',
+        'Bij het verwijderen van een asbesthoudende dakbedekking dient rekening gehouden te worden met de eventuele vervuilde isolatie onder het dak, vervuilde zoldervloer, stof en brokken op de dakstructuur, (Historische vervuiling). Materialen die ten gevolge van historische vervuiling verontreinigd zijn met asbestvezels dienen gereinigd of als asbesthoudend afval afgevoerd te worden.',
+      ]},
+      { titel: 'Aanbevelingen betreffende hergebruik- en/of recyclagemogelijkheden:', items: [
+        'Het beste betonpuin kan worden gebruikt als grondstof voor de productie van hoogwaardige betongranulaten die opnieuw in beton gebruikt kunnen worden. Dit rekening houdend met een voldoende hoeveelheid, voldoende kwaliteit en voldoende zuiverheid.',
+        'Metaalafval kan worden gerecycleerd tot nieuwe metaalproducten.',
+        'Vlak glas kan worden gerecycleerd tot herbruikbare glasscherven die een grondstof vormen voor nieuwe glasproducten.',
+        'Metselwerk kan worden gebroken en gerecycleerd als fundering voor weginfrastructuur. Dit enkel met afzonderlijke inzameling van gipshoudend afval en vreemde materialen.',
+      ]},
+    ];
+
+    for (const g of projAanb) {
+      children.push(mkP(g.titel, { italics: true }));
+      for (const item of g.items) {
+        children.push(new Paragraph({
+          children: [mkRun('• ', {}), mkRun(item, { italics: true })],
+          spacing: { after: 60 },
+        }));
+      }
+    }
+
+    const extraAanb = document.getElementById('extra-aanbevelingen').value;
+    if (extraAanb) {
+      children.push(mkP('Aanvullende projectspecifieke aanbevelingen:', { bold: true }));
+      children.push(mkP(extraAanb, { italics: true }));
+    }
+
+    // === BIJLAGEN OVERZICHT ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Bijlagen i.k.v. het sloopopvolgingsplan', { heading: HeadingLevel.HEADING_1, bold: true }));
+    const bijlagen = [
+      'Bijlage 1: Situering project',
+      'Bijlage 2: Sloopinventaris',
+      '    Bijlage 2a: Inventaris van de asbesthoudende materialen met toekenning van de 3-delige code',
+      '    Bijlage 2b: Inventaris van de overige gevaarlijke materialen',
+      '    Bijlage 2c: Inventaris van de niet-gevaarlijke materialen',
+      '    Bijlage 2d: Totaalinventaris',
+      'Bijlage 3: Destructieve asbestinventaris',
+      '    Bijlage 3a: Situering asbestverdachte en -houdende toepassingen',
+      '    Bijlage 3b: Analyseverslagen',
+      '    Bijlage 3c: Andere documenten',
+      'Bijlage 4: Potentieel gevaarlijke materialen andere dan asbest',
+      '    Bijlage 4a: Beschrijvende fiches van de gevaarlijke materialen andere dan asbest',
+      '    Bijlage 4b: Identificatie (optioneel)',
+      '    Bijlage 4c: Situering',
+      '    Bijlage 4d: Analyseverslagen',
+      '    Bijlage 4e: Andere documenten',
+      'Bijlage 5: Foto\'s veldonderzoek',
+      'Bijlage 6: Voorbereidend (historisch) onderzoek',
+      '    Bijlage 6a: Bedrijfsactiviteiten en vergunningen',
+      '    Bijlage 6b: Bouwplannen en bestekken',
+      '    Bijlage 6c: Fotomateriaal',
+      '    Bijlage 6d: Bestaande asbestinventaris(sen)',
+      '    Bijlage 6e: Bestaande sloopinventaris(sen)',
+      '    Bijlage 6f: Bestaand(e) bodemonderzoek(en), technisch(e) verslag(en) en PFAS-onderzoek(en)',
+      'Bijlage 7: Buitenverhardingen',
+      'Bijlage 8: Hergebruik (optioneel)',
+      'Bijlage 9: Hoogwaardige recyclage (optioneel)',
+    ];
+    for (const b of bijlagen) {
+      const indent = b.startsWith('    ');
+      children.push(mkP(indent ? b.trim() : b, { bold: !indent, size: indent ? 20 : 22 }));
+    }
+
+    // === BIJLAGE 1: SITUERING ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Bijlage 1: Situering project', { heading: HeadingLevel.HEADING_1, bold: true }));
+    for (const plan of situeringPlannen) {
+      children.push(new Paragraph({
+        children: [new ImageRun({ data: plan.data, transformation: { width: plan.width, height: plan.height } })],
+        alignment: AlignmentType.CENTER, spacing: { after: 100 },
+      }));
+    }
+    children.push(mkP('ROOD = af te breken bebouwing', { color: 'FF0000', bold: true }));
+    children.push(mkP('GROEN = op te breken buitenverharding', { color: '00AA00', bold: true }));
+
+    // === BIJLAGE 2: SLOOPINVENTARIS ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Bijlage 2: Sloopinventaris', { heading: HeadingLevel.HEADING_1, bold: true }));
+
+    const asbestItems = inventarisItems.filter(i => i.categorie === 'asbest');
+    const gevaarlijkItems = inventarisItems.filter(i => i.categorie === 'gevaarlijk');
+    const nietGevItems = inventarisItems.filter(i => i.categorie === 'niet-gevaarlijk');
+
+    // Helper voor inventaris tabel
+    function makeInvTable(items, titel, showCode) {
+      children.push(mkP(titel, { heading: HeadingLevel.HEADING_2 }));
+      if (items.length === 0) {
+        children.push(mkP('Niet van toepassing.', { italics: true }));
+        return;
+      }
+      const hdrCells = [
+        mkCell('Gebouw', { bold: true, size: 16 }), mkCell('Lokaal', { bold: true, size: 16 }),
+        mkCell('Onderdeel', { bold: true, size: 16 }), mkCell('Materiaal', { bold: true, size: 16 }),
+        mkCell('Benaming afvalstof', { bold: true, size: 16 }), mkCell('EURAL', { bold: true, size: 16 }),
+        mkCell('Aantal', { bold: true, size: 16 }), mkCell('Opp./lm', { bold: true, size: 16 }),
+        mkCell('Massa (ton)', { bold: true, size: 16 }),
+      ];
+      if (showCode) hdrCells.push(mkCell('3-delige code', { bold: true, size: 16 }));
+      const rows = [mkRow(hdrCells)];
+      for (const it of items) {
+        const cells = [
+          mkCell(it.gebouw, { size: 16, italics: true }), mkCell(it.lokaal, { size: 16, italics: true }),
+          mkCell(it.onderdeel, { size: 16, italics: true }), mkCell(it.materiaal, { size: 16, italics: true }),
+          mkCell(it.afvalstof, { size: 16, italics: true }), mkCell(it.eural, { size: 16, italics: true }),
+          mkCell(it.aantal, { size: 16, italics: true }), mkCell(it.opp, { size: 16, italics: true }),
+          mkCell(it.massa, { size: 16, italics: true }),
+        ];
+        if (showCode) cells.push(mkCell(it.code, { size: 16, italics: true }));
+        rows.push(mkRow(cells));
+      }
+      children.push(new Table({ rows, width: { size: 9000, type: WidthType.DXA } }));
+    }
+
+    makeInvTable(asbestItems, 'Bijlage 2a: Inventaris van de asbesthoudende materialen met toekenning van de 3-delige code', true);
+    makeInvTable(gevaarlijkItems, 'Bijlage 2b: Inventaris van de overige gevaarlijke materialen', false);
+    makeInvTable(nietGevItems, 'Bijlage 2c: Inventaris van de niet-gevaarlijke materialen', false);
+    makeInvTable(inventarisItems, 'Bijlage 2d: Totaalinventaris', true);
+
+    // === BIJLAGE 3: DESTRUCTIEVE ASBESTINVENTARIS ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Bijlage 3: Destructieve asbestinventaris', { heading: HeadingLevel.HEADING_1, bold: true }));
+
+    // Materiaalfiches
+    children.push(mkP('Beschrijvende fiches van de asbestverdachte en -houdende materialen', { heading: HeadingLevel.HEADING_2 }));
+
+    for (let i = 0; i < materiaalfiches.length; i++) {
+      const f = materiaalfiches[i];
+      const ficheRows = [];
+
+      // Titel
+      ficheRows.push(mkRow([mkCell(`Materiaal ${i + 1}`, { bold: true, shading: 'D5E8D4' }), mkCell('', { shading: 'D5E8D4' })]));
+
+      // Foto's
+      if (f.fotos.length > 0) {
+        ficheRows.push(mkRow([
+          new TableCell({
+            children: f.fotos.map(foto => new Paragraph({
+              children: [new ImageRun({ data: foto.data, transformation: { width: foto.width * 0.6, height: foto.height * 0.6 } })],
+              alignment: AlignmentType.CENTER,
+            })),
+            columnSpan: 2,
+          }),
+        ]));
+      }
+
+      ficheRows.push(mkRow([mkCell('Kenmerken', { bold: true, shading: 'E8E8E8' }), mkCell('', { shading: 'E8E8E8' })]));
+      ficheRows.push(mkRow([mkCell('Type toepassing'), mkCell(f.toepassing, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Locatie'), mkCell(f.locatie, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Hoeveelheid (ton, lm, m², ...)'), mkCell(f.hoeveelheid, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Bevestigingswijze'), mkCell(f.bevestiging, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Beoordeling van de toestand'), mkCell(f.toestand, { italics: true })]));
+      if (f.opm) ficheRows.push(mkRow([mkCell('Opmerkingen'), mkCell(f.opm, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Conclusie', { bold: true, shading: 'E8E8E8' }), mkCell('', { shading: 'E8E8E8' })]));
+      ficheRows.push(mkRow([mkCell('Aanwezigheid of afwezigheid van asbest', { bold: true }), mkCell(f.asbestStatus, { bold: true })]));
+      ficheRows.push(mkRow([mkCell('Monsternummer(s)'), mkCell(f.monster, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Monsternamestrategie'), mkCell(f.strategie, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Type asbest'), mkCell(f.typeAsbest, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('(Semi-)Hechtgebonden / Losgebonden'), mkCell(f.gebondenheid, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Blootstellingsrisico'), mkCell(f.risico, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Voorgestelde verwijderingswijze'), mkCell(f.verwijdering !== '-' ? `☒ ${f.verwijdering}` : '-', { italics: true })]));
+      ficheRows.push(mkRow([mkCell('3-delige code'), mkCell(f.code, { italics: true })]));
+
+      children.push(new Table({ rows: ficheRows, width: { size: 9000, type: WidthType.DXA } }));
+      children.push(mkP(''));
+    }
+
+    // === BIJLAGE 4: GEVAARLIJKE MATERIALEN ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Bijlage 4: Potentieel gevaarlijke materialen andere dan asbest', { heading: HeadingLevel.HEADING_1, bold: true }));
+    children.push(mkP('Bijlage 4a: Beschrijvende fiches van de gevaarlijke materialen andere dan asbest', { heading: HeadingLevel.HEADING_2 }));
+
+    if (gevaarlijkFiches.length === 0) {
+      children.push(mkP('Niet van toepassing.', { italics: true }));
+    }
+    for (let i = 0; i < gevaarlijkFiches.length; i++) {
+      const f = gevaarlijkFiches[i];
+      const ficheRows = [];
+      ficheRows.push(mkRow([mkCell(`GA${i + 1}`, { bold: true, shading: 'FDEBD0' }), mkCell('', { shading: 'FDEBD0' })]));
+      if (f.fotos.length > 0) {
+        ficheRows.push(mkRow([
+          new TableCell({
+            children: f.fotos.map(foto => new Paragraph({
+              children: [new ImageRun({ data: foto.data, transformation: { width: foto.width * 0.6, height: foto.height * 0.6 } })],
+              alignment: AlignmentType.CENTER,
+            })),
+            columnSpan: 2,
+          }),
+        ]));
+      }
+      ficheRows.push(mkRow([mkCell('Kenmerken', { bold: true, shading: 'E8E8E8' }), mkCell('', { shading: 'E8E8E8' })]));
+      ficheRows.push(mkRow([mkCell('Type toepassing'), mkCell(f.toepassing, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('EURAL code'), mkCell(f.eural, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Locatie'), mkCell(f.locatie, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Hoeveelheid'), mkCell(f.hoeveelheid, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Bevestigingswijze'), mkCell(f.bevestiging, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Beoordeling van de toestand'), mkCell(f.toestand, { italics: true })]));
+      if (f.opm) ficheRows.push(mkRow([mkCell('Opmerkingen'), mkCell(f.opm, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Advies m.b.t. verwijdering'), mkCell(f.advies, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Conclusie', { bold: true, shading: 'E8E8E8' }), mkCell('', { shading: 'E8E8E8' })]));
+      ficheRows.push(mkRow([mkCell('Aanwezig- of afwezigheid van gevaarlijke materialen', { bold: true }), mkCell('Aanwezig', { bold: true })]));
+      ficheRows.push(mkRow([mkCell('Wijze van vaststelling'), mkCell(`☒ ${f.vaststelling}`, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Monsternummers'), mkCell(f.monsternr, { italics: true })]));
+      ficheRows.push(mkRow([mkCell('Monsternamestrategie'), mkCell(f.strategie, { italics: true })]));
+      children.push(new Table({ rows: ficheRows, width: { size: 9000, type: WidthType.DXA } }));
+      children.push(mkP(''));
+    }
+
+    // === BIJLAGE 5: FOTO'S VELDONDERZOEK ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP("Bijlage 5: Foto's veldonderzoek", { heading: HeadingLevel.HEADING_1, bold: true }));
+
+    for (const zone of fotozones) {
+      children.push(mkP(zone.naam + ':', { bold: true, italics: true }));
+      for (const foto of zone.fotos) {
+        children.push(new Paragraph({
+          children: [new ImageRun({ data: foto.data, transformation: { width: foto.width, height: foto.height } })],
+          alignment: AlignmentType.CENTER, spacing: { after: 80 },
+        }));
+      }
+    }
+
+    // === BIJLAGE 6: HISTORISCH ONDERZOEK ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Bijlage 6: Voorbereidend (historisch) onderzoek', { heading: HeadingLevel.HEADING_1, bold: true }));
+
+    children.push(mkP('Bijlage 6a: Bedrijfsactiviteiten en vergunningen', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP(document.getElementById('bedrijfsactiviteiten').value === 'geen' ? 'Niet van toepassing.' : 'Zie documentatie.', { italics: true }));
+
+    children.push(mkP('Bijlage 6b: Bouwplannen en bestekken', { heading: HeadingLevel.HEADING_2 }));
+    if (bouwplannenImgs.length > 0) {
+      for (const img of bouwplannenImgs) {
+        children.push(new Paragraph({
+          children: [new ImageRun({ data: img.data, transformation: { width: img.width, height: img.height } })],
+          alignment: AlignmentType.CENTER, spacing: { after: 100 },
+        }));
+      }
+    } else {
+      children.push(mkP('Niet van toepassing.', { italics: true }));
+    }
+
+    children.push(mkP('Bijlage 6c: Fotomateriaal', { heading: HeadingLevel.HEADING_2 }));
+    for (const h of historischFotos) {
+      if (h.beschrijving) children.push(mkP(h.beschrijving, { bold: true }));
+      if (h.foto) {
+        children.push(new Paragraph({
+          children: [new ImageRun({ data: h.foto.data, transformation: { width: h.foto.width, height: h.foto.height } })],
+          alignment: AlignmentType.CENTER, spacing: { after: 100 },
+        }));
+      }
+    }
+    if (historischFotos.length === 0) children.push(mkP('Niet van toepassing.', { italics: true }));
+
+    children.push(mkP('Bijlage 6d: Bestaande asbestinventaris(sen)', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP(document.getElementById('bestaande-asbest').value === 'geen' ? 'Niet van toepassing.' : 'Zie bijgevoegde documenten.', { italics: true }));
+
+    children.push(mkP('Bijlage 6e: Bestaande sloopinventaris(sen)', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP(document.getElementById('bestaande-sloop').value === 'geen' ? 'Niet van toepassing.' : 'Zie bijgevoegde documenten.', { italics: true }));
+
+    children.push(mkP('Bijlage 6f: Bestaand(e) bodemonderzoek(en), technisch(e) verslagen en PFAS-onderzoek(en)', { heading: HeadingLevel.HEADING_2 }));
+    children.push(mkP('Niet van toepassing.', { italics: true }));
+
+    // === BIJLAGE 7: BUITENVERHARDINGEN ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Bijlage 7: Buitenverhardingen', { heading: HeadingLevel.HEADING_1, bold: true }));
+
+    if (verhardingImgs.length > 0) {
+      children.push(mkP('Bijlage 7c: Fotomateriaal', { heading: HeadingLevel.HEADING_2 }));
+      for (const img of verhardingImgs) {
+        children.push(new Paragraph({
+          children: [new ImageRun({ data: img.data, transformation: { width: img.width, height: img.height } })],
+          spacing: { after: 80 },
+        }));
+      }
+    } else {
+      children.push(mkP('Niet van toepassing.', { italics: true }));
+    }
+
+    // === BIJLAGE 8-9 ===
+    children.push(mkP('Bijlage 8: Hergebruik', { heading: HeadingLevel.HEADING_1, bold: true }));
+    children.push(mkP('Niet van toepassing.', { italics: true }));
+    children.push(mkP('Bijlage 9: Hoogwaardige recyclage', { heading: HeadingLevel.HEADING_1, bold: true }));
+    children.push(mkP('Niet van toepassing.', { italics: true }));
+
+    // ===== CREATE DOCUMENT =====
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 },
+          },
+        },
+        children,
+      }],
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const fileName = `SOP - ${adres.replace(/[^a-zA-Z0-9\s]/g, '')}.docx`;
+    saveAs(blob, fileName);
+
+  } catch (err) {
+    console.error(err);
+    alert('Fout bij generatie: ' + err.message);
+  } finally {
+    btn.textContent = 'Genereer SOP (.docx)';
+    btn.disabled = false;
+  }
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  // Set date defaults
+  const today = new Date();
+  document.getElementById('datum-opmaak').value = today.toISOString().split('T')[0];
+  const dd = String(today.getDate()).padStart(2,'0');
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const yyyy = today.getFullYear();
+  document.getElementById('versie-datum').value = `${dd}/${mm}/${yyyy}`;
+  document.getElementById('geoloket-datum').value = `${dd}/${mm}/${yyyy}`;
+  document.getElementById('pfas-datum').value = `${dd}/${mm}/${yyyy}`;
+  document.getElementById('datum-plaatsbezoek').value = `${dd}/${mm}/${yyyy}`;
+
+  // Setup image previews
+  setupImagePreview('foto-voorblad', 'preview-voorblad');
+  setupImagePreview('plan-situering', 'preview-situering');
+  setupImagePreview('geoloket-screenshot', 'preview-geoloket');
+  setupImagePreview('pfas-screenshot', 'preview-pfas');
+  setupImagePreview('bouwplannen-fotos', 'preview-bouwplannen');
+  setupImagePreview('verharding-fotos', 'preview-verhardingen');
+
+  // Add one default gebouw
+  addGebouw();
+
+  // Show/hide on change
+  document.getElementById('bedrijfsactiviteiten').addEventListener('change', function() {
+    document.getElementById('bedrijfsactiviteiten-detail').style.display = this.value === 'wel' ? 'block' : 'none';
+  });
+  document.getElementById('regio-risico').addEventListener('change', function() {
+    document.getElementById('regio-risico-detail').style.display = this.value === 'wel' ? 'block' : 'none';
+  });
+});
+</script>
+
+</body>
+</html>

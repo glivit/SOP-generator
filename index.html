@@ -1122,10 +1122,21 @@ async function generateSOP() {
       });
     }
 
+    // Asbest overzicht toepassingen (Bijlage 3.1)
+    const asbestOverzicht = [];
+    for (const el of document.querySelectorAll('#asbest-toepassingen-lijst .dynamic-item')) {
+      asbestOverzicht.push({
+        toepassing: qv(el, '.ao-toepassing'),
+        aanwezig: qv(el, '.ao-aanwezig'),
+        bemonsterd: qv(el, '.ao-bemonsterd'),
+      });
+    }
+
     // Materiaalfiches (asbest)
     const materiaalfiches = [];
     for (const el of document.querySelectorAll('#materiaalfiches-lijst .dynamic-item')) {
-      const fotos = el.querySelector('.fiche-foto').files;
+      const fotoInput = el.querySelector('.fiche-foto');
+      const fotos = (fotoInput && fotoInput.files) ? fotoInput.files : [];
       const fotoData = [];
       for (const f of fotos) {
         const dataUrl = await readFileAsDataUrl(f);
@@ -1147,7 +1158,8 @@ async function generateSOP() {
     // Gevaarlijke materiaal fiches
     const gevaarlijkFiches = [];
     for (const el of document.querySelectorAll('#gevaarlijk-fiches-lijst .dynamic-item')) {
-      const fotos = el.querySelector('.gev-foto').files;
+      const gevFotoInput = el.querySelector('.gev-foto');
+      const fotos = (gevFotoInput && gevFotoInput.files) ? gevFotoInput.files : [];
       const fotoData = [];
       for (const f of fotos) {
         const dataUrl = await readFileAsDataUrl(f);
@@ -1168,7 +1180,8 @@ async function generateSOP() {
     const fotozones = [];
     for (const el of document.querySelectorAll('#fotozones-lijst .dynamic-item')) {
       const naam = qv(el, '.zone-naam');
-      const fotos = el.querySelector('.zone-fotos').files;
+      const zoneFotoInput = el.querySelector('.zone-fotos');
+      const fotos = (zoneFotoInput && zoneFotoInput.files) ? zoneFotoInput.files : [];
       const fotoData = [];
       for (const f of fotos) {
         const dataUrl = await readFileAsDataUrl(f);
@@ -1392,6 +1405,8 @@ async function generateSOP() {
       children.push(mkP('☒ Er werd door de initiatiefnemer of opdrachtgever geen informatie ter beschikking gesteld m.b.t. de bedrijfsactiviteiten en/of er zijn geen bedrijfsactiviteiten van toepassing.'));
     } else {
       children.push(mkP('☒ Er werd informatie ter beschikking gesteld m.b.t. de bedrijfsactiviteiten.'));
+      const bedrDetail = document.getElementById('bedrijfsactiviteiten-detail').value;
+      if (bedrDetail) children.push(mkP(bedrDetail, { italics: true }));
     }
 
     // Bouwplannen
@@ -1485,6 +1500,10 @@ async function generateSOP() {
     children.push(mkP(regioSel === 'geen'
       ? "☒ De projectzone is niet gelegen t.h.v. een locatie die behoort tot een van de regiogebonden risico's."
       : "☒ De projectzone is gelegen t.h.v. een locatie die behoort tot regiogebonden risico's."));
+    if (regioSel === 'wel') {
+      const regioDetail = document.getElementById('regio-risico-detail').value;
+      if (regioDetail) children.push(mkP(regioDetail, { italics: true }));
+    }
 
     // === 3. VELDONDERZOEK ===
     children.push(new Paragraph({ children: [new PageBreak()] }));
@@ -1763,6 +1782,22 @@ async function generateSOP() {
     children.push(new Paragraph({ children: [new PageBreak()] }));
     children.push(mkP('Bijlage 3: Destructieve asbestinventaris', { heading: HeadingLevel.HEADING_1, bold: true }));
 
+    // 3.1 Asbestverdachte materialen overzicht
+    if (asbestOverzicht.length > 0) {
+      children.push(mkP('De geleverde onderzoeksinspanningen werden uitgevoerd in overeenstemming met de standaardprocedure voor opmaak van een sloopopvolgingsplan en controleverslag (2.5.4.3 Asbestverdachte materialen).', { italics: true }));
+      const aoHeaderRow = mkRow([
+        mkCell('Toepassing', { bold: true }), mkCell('Aanwezig (ja/nee)', { bold: true }), mkCell('Bemonsterd (ja/nee)', { bold: true }),
+      ]);
+      const aoRows = [aoHeaderRow];
+      for (const ao of asbestOverzicht) {
+        aoRows.push(mkRow([
+          mkCell(ao.toepassing, { italics: true }), mkCell(ao.aanwezig, { italics: true }), mkCell(ao.bemonsterd, { italics: true }),
+        ]));
+      }
+      children.push(new Table({ rows: aoRows, width: { size: 9000, type: WidthType.DXA } }));
+      children.push(mkP(''));
+    }
+
     // Materiaalfiches
     children.push(mkP('Beschrijvende fiches van de asbestverdachte en -houdende materialen', { heading: HeadingLevel.HEADING_2 }));
 
@@ -1936,8 +1971,7 @@ async function generateSOP() {
       }],
     });
 
-    const buffer = await Packer.toBuffer(doc);
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const blob = await Packer.toBlob(doc);
     const fileName = `SOP - ${adres.replace(/[^a-zA-Z0-9\s]/g, '')}.docx`;
     saveAs(blob, fileName);
 

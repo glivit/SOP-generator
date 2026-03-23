@@ -455,6 +455,14 @@ header p { opacity: 0.8; font-size: 0.9rem; }
   <div id="niet-toegankelijk-container" style="display:none;">
     <div id="niet-toegankelijk-lijst" class="dynamic-list"></div>
     <button class="btn btn-secondary btn-sm" onclick="addNietToegankelijk()" style="margin-top:12px;">+ Niet-toegankelijke zone toevoegen</button>
+    <div class="sub-section" style="margin-top:12px;">
+      <h4>Plan niet-toegankelijke gebouwdelen</h4>
+      <div class="image-upload" onclick="this.querySelector('input').click()">
+        <input type="file" id="niet-toegankelijk-plan" accept="image/*" multiple>
+        <span>Klik om plan(nen) te uploaden met aanduiding niet-toegankelijke zones</span>
+        <div class="image-preview" id="preview-niet-toegankelijk"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -514,6 +522,49 @@ header p { opacity: 0.8; font-size: 0.9rem; }
   </div>
 
   <div class="sub-section">
+    <h4>Per materiaaltype — vaststellingen</h4>
+    <div class="info-box">Vink aan welke asbestverdachte materiaaltypen aanwezig/afwezig zijn. De standaard checkboxtekst wordt automatisch gegenereerd.</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Pleisterwerk/crépi</label>
+        <select id="mat-pleisterwerk"><option value="aanwezig">Aanwezig + bemonsterd</option><option value="afwezig">Niet vastgesteld</option></select>
+      </div>
+      <div class="form-group"><label>Mastiek (glas/schrijnwerk)</label>
+        <select id="mat-mastiek-glas"><option value="aanwezig">Aanwezig + bemonsterd</option><option value="afwezig">Niet vastgesteld</option></select>
+      </div>
+      <div class="form-group"><label>Mastiek (muur/overige)</label>
+        <select id="mat-mastiek-muur"><option value="afwezig">Niet vastgesteld</option><option value="aanwezig">Aanwezig + bemonsterd</option></select>
+      </div>
+      <div class="form-group"><label>Thermische isolatie</label>
+        <select id="mat-isolatie"><option value="aanwezig">Aanwezig + bemonsterd</option><option value="afwezig">Niet vastgesteld</option></select>
+      </div>
+      <div class="form-group"><label>Roofing</label>
+        <select id="mat-roofing"><option value="afwezig">Niet vastgesteld</option><option value="aanwezig">Aanwezig + bemonsterd</option><option value="niet-waarneembaar">Niet waarneembaar (onderzoeksbeperking)</option></select>
+      </div>
+      <div class="form-group"><label>Afdruip- en afvloeizones</label>
+        <select id="mat-afdruip"><option value="afwezig">Geen afdruipzones vastgesteld</option><option value="aanwezig">Afdruipzones vastgesteld</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-section">
+    <h4>Bijlage 3a: Situering asbestverdachte toepassingen (plannen)</h4>
+    <div class="image-upload" onclick="this.querySelector('input').click()">
+      <input type="file" id="bijlage3a-plannen" accept="image/*" multiple>
+      <span>Klik om plattegronden met asbestlocaties te uploaden</span>
+      <div class="image-preview" id="preview-bijlage3a"></div>
+    </div>
+  </div>
+
+  <div class="sub-section">
+    <h4>Bijlage 3b: Analyseverslagen (lab)</h4>
+    <div class="image-upload" onclick="this.querySelector('input').click()">
+      <input type="file" id="bijlage3b-verslagen" accept="image/*" multiple>
+      <span>Klik om analyseverslagen van het labo te uploaden</span>
+      <div class="image-preview" id="preview-bijlage3b"></div>
+    </div>
+  </div>
+
+  <div class="sub-section">
     <h4>3.2 Onderzoeksmethoden & lab</h4>
     <div class="form-grid">
       <div class="form-group full">
@@ -553,6 +604,22 @@ header p { opacity: 0.8; font-size: 0.9rem; }
 <div class="section">
   <div class="section-title">Bijlage 4: Gevaarlijke materialen (andere dan asbest)</div>
   <div class="info-box">Voeg fiches toe voor gevaarlijke materialen zoals TL-lampen, stookolietanks, PCB-condensatoren, etc.</div>
+  <div class="sub-section">
+    <h4>Bijlage 4c: Situering gevaarlijke materialen (plannen)</h4>
+    <div class="image-upload" onclick="this.querySelector('input').click()">
+      <input type="file" id="bijlage4c-plannen" accept="image/*" multiple>
+      <span>Klik om plattegronden met locaties gevaarlijke materialen te uploaden</span>
+      <div class="image-preview" id="preview-bijlage4c"></div>
+    </div>
+  </div>
+  <div class="sub-section">
+    <h4>Bijlage 4d: Analyseverslagen gevaarlijke materialen</h4>
+    <div class="image-upload" onclick="this.querySelector('input').click()">
+      <input type="file" id="bijlage4d-verslagen" accept="image/*" multiple>
+      <span>Klik om analyseverslagen te uploaden</span>
+      <div class="image-preview" id="preview-bijlage4d"></div>
+    </div>
+  </div>
   <div id="gevaarlijk-fiches-lijst" class="dynamic-list"></div>
   <button class="btn btn-secondary btn-sm" onclick="addGevaarlijkFiche()" style="margin-top:12px;">+ Gevaarlijk materiaal fiche toevoegen</button>
 </div>
@@ -1321,6 +1388,61 @@ async function generateSOP() {
       }
     }
 
+    // Bijlage 3a: Situering asbestverdachte toepassingen (plannen)
+    const bijlage3aImgs = [];
+    const b3aInput = document.getElementById('bijlage3a-plannen');
+    if (b3aInput && b3aInput.files) {
+      for (const f of b3aInput.files) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 550, 700);
+        bijlage3aImgs.push(processed);
+      }
+    }
+
+    // Bijlage 3b: Analyseverslagen (lab)
+    const bijlage3bImgs = [];
+    const b3bInput = document.getElementById('bijlage3b-verslagen');
+    if (b3bInput && b3bInput.files) {
+      for (const f of b3bInput.files) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 550, 700);
+        bijlage3bImgs.push(processed);
+      }
+    }
+
+    // Bijlage 4c: Situering gevaarlijke materialen (plannen)
+    const bijlage4cImgs = [];
+    const b4cInput = document.getElementById('bijlage4c-plannen');
+    if (b4cInput && b4cInput.files) {
+      for (const f of b4cInput.files) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 550, 700);
+        bijlage4cImgs.push(processed);
+      }
+    }
+
+    // Bijlage 4d: Analyseverslagen gevaarlijke materialen
+    const bijlage4dImgs = [];
+    const b4dInput = document.getElementById('bijlage4d-verslagen');
+    if (b4dInput && b4dInput.files) {
+      for (const f of b4dInput.files) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 550, 700);
+        bijlage4dImgs.push(processed);
+      }
+    }
+
+    // Niet-toegankelijk plan(nen)
+    const nietToegPlanImgs = [];
+    const ntpInput = document.getElementById('niet-toegankelijk-plan');
+    if (ntpInput && ntpInput.files) {
+      for (const f of ntpInput.files) {
+        const dataUrl = await readFileAsDataUrl(f);
+        const processed = await processImage(dataUrl, 550, 700);
+        nietToegPlanImgs.push(processed);
+      }
+    }
+
     // ---- HELPER FUNCTIONS ----
     const FONT = 'Calibri';
     const mkP = (text, opts = {}) => new Paragraph({
@@ -1407,12 +1529,17 @@ async function generateSOP() {
 
     // Totalen
     if (gebouwen.length > 0) {
-      const totOpp = gebouwen.map(g => g.opp).filter(Boolean).join(' + ');
-      const totVol = gebouwen.map(g => g.volume).filter(Boolean).join(' + ');
+      // Parse numeric values (handles comma as decimal separator)
+      const parseNum = (s) => { if (!s) return 0; return parseFloat(s.replace(/\s*m[²³]\s*/g, '').replace(',', '.').replace(/[^0-9.]/g, '')) || 0; };
+      const totOppNum = gebouwen.reduce((sum, g) => sum + parseNum(g.opp), 0);
+      const totVolNum = gebouwen.reduce((sum, g) => sum + parseNum(g.volume), 0);
+      const fmtNum = (n) => n ? n.toLocaleString('nl-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '0';
+      const totOppStr = gebouwen.length === 1 ? (gebouwen[0].opp || '-') : `${fmtNum(totOppNum)} m²`;
+      const totVolStr = gebouwen.length === 1 ? (gebouwen[0].volume || '-') : `${fmtNum(totVolNum)} m³`;
       children.push(new Table({
         rows: [
-          mkRow([mkCell('Totale bruto bruikbare oppervlakte (m²)', { bold: true }), mkCell(totOpp || gebouwen[0].opp, { italics: true }), mkCell('')]),
-          mkRow([mkCell('Totaal bouwvolume (m³)', { bold: true }), mkCell(totVol || gebouwen[0].volume, { italics: true }), mkCell('')]),
+          mkRow([mkCell('Totale bruto bruikbare oppervlakte (m²) †', { bold: true }), mkCell(totOppStr, { italics: true }), mkCell('')]),
+          mkRow([mkCell('Totaal bouwvolume (m³)', { bold: true }), mkCell(totVolStr, { italics: true }), mkCell('')]),
           mkRow([mkCell('Historiek', { bold: true }), mkCell('Bouwjaar', { bold: true }), mkCell(gebouwen[0].bouwjaar || 'Onbekend', { italics: true })]),
           mkRow([mkCell('', {}), mkCell('Renovaties', { bold: true }), mkCell(gebouwen[0].renovaties || 'Onbekend', { italics: true })]),
         ],
@@ -1643,6 +1770,16 @@ async function generateSOP() {
         ]));
       }
       children.push(new Table({ rows: ntRows, width: { size: 9000, type: WidthType.DXA } }));
+      // Plan niet-toegankelijke gebouwdelen
+      if (nietToegPlanImgs.length > 0) {
+        children.push(mkP('Plan met aanduiding van de niet-toegankelijke gebouwdelen:', { bold: true, italics: true }));
+        for (const img of nietToegPlanImgs) {
+          children.push(new Paragraph({
+            children: [new ImageRun({ data: img.data, transformation: { width: img.width, height: img.height } })],
+            alignment: AlignmentType.CENTER, spacing: { after: 100 },
+          }));
+        }
+      }
     } else {
       children.push(mkP('☒ Er zijn geen ruimtes en/of gebouwen/gebouwdelen die niet toegankelijk waren en niet destructief onderzocht konden worden.'));
     }
@@ -1809,6 +1946,7 @@ async function generateSOP() {
         mkCell('Massa (ton)', { bold: true, size: 16 }),
       ];
       if (showCode) hdrCells.push(mkCell('3-delige code', { bold: true, size: 16 }));
+      hdrCells.push(mkCell('Opmerkingen', { bold: true, size: 16 }));
       const rows = [mkRow(hdrCells)];
       for (const it of items) {
         const cells = [
@@ -1819,6 +1957,7 @@ async function generateSOP() {
           mkCell(it.massa, { size: 16, italics: true }),
         ];
         if (showCode) cells.push(mkCell(it.code, { size: 16, italics: true }));
+        cells.push(mkCell(it.opm || '', { size: 16, italics: true }));
         rows.push(mkRow(cells));
       }
       children.push(new Table({ rows, width: { size: 9000, type: WidthType.DXA } }));
@@ -1847,6 +1986,41 @@ async function generateSOP() {
       }
       children.push(new Table({ rows: aoRows, width: { size: 9000, type: WidthType.DXA } }));
       children.push(mkP(''));
+    }
+
+    // Per-materiaaltype subsecties
+    const matTypes = [
+      { id: 'mat-pleisterwerk', naam: 'Pleisterwerk/crépi',
+        aanwezig: 'Er werd asbestverdacht pleisterwerk/crépi vastgesteld door de sloopdeskundige t.h.v. de projectzone. Het aanwezige pleisterwerk werd per gebouw bemonsterd conform de bepalingen opgenomen in de standaardprocedure voor opmaak van een sloopopvolgingsplan en controleverslag (2.5.4.3 Asbestverdachte materialen).',
+        afwezig: 'Er werd geen asbestverdacht pleisterwerk/crépi vastgesteld door de sloopdeskundige t.h.v. de projectzone.' },
+      { id: 'mat-mastiek-glas', naam: 'Mastiek (glas/schrijnwerk)',
+        aanwezig: 'Er werd asbestverdachte mastiek vastgesteld door de sloopdeskundige t.h.v. de projectzone. De aanwezige mastiek werd per type bemonsterd conform de bepalingen opgenomen in de standaardprocedure voor opmaak van een sloopopvolgingsplan en controleverslag (2.5.4.3 Asbestverdachte materialen).',
+        afwezig: 'Er werd geen asbestverdachte mastiek (glas/schrijnwerk) vastgesteld door de sloopdeskundige t.h.v. de projectzone.' },
+      { id: 'mat-mastiek-muur', naam: 'Mastiek (muur/schrijnwerk of overige)',
+        aanwezig: 'Er werd asbestverdachte mastiek (muur/overige) vastgesteld door de sloopdeskundige t.h.v. de projectzone.',
+        afwezig: 'Er werd geen asbestverdachte mastiek (muur/schrijnwerk of overige) vastgesteld door de sloopdeskundige t.h.v. de projectzone.' },
+      { id: 'mat-isolatie', naam: 'Thermische isolatie',
+        aanwezig: 'Er werd asbestverdacht isolatiemateriaal vastgesteld door de sloopdeskundige t.h.v. de projectzone. Het aanwezige isolatiemateriaal werd bemonsterd conform de bepalingen opgenomen in de standaardprocedure voor opmaak van een sloopopvolgingsplan en controleverslag (2.5.4.3 Asbestverdachte materialen).',
+        afwezig: 'Er werd geen asbestverdacht isolatiemateriaal vastgesteld door de sloopdeskundige t.h.v. de projectzone.' },
+      { id: 'mat-roofing', naam: 'Roofing',
+        aanwezig: 'Er werd asbestverdachte roofing vastgesteld door de sloopdeskundige t.h.v. de projectzone.',
+        afwezig: 'Er werd geen asbestverdachte roofing vastgesteld door de sloopdeskundige t.h.v. de projectzone.' },
+      { id: 'mat-afdruip', naam: 'Afdruip- en afvloeizones',
+        aanwezig: 'Er werden afdruipzones vastgesteld t.h.v. de projectzone.',
+        afwezig: 'Er werden geen afdruipzones vastgesteld t.h.v. de projectzone.' },
+    ];
+    for (const mt of matTypes) {
+      const el = document.getElementById(mt.id);
+      if (!el) continue;
+      const val = el.value;
+      children.push(mkP(mt.naam, { heading: HeadingLevel.HEADING_3 }));
+      if (val === 'aanwezig') {
+        children.push(mkP('☒ ' + mt.aanwezig));
+      } else if (val === 'niet-waarneembaar') {
+        children.push(mkP('☒ ' + mt.afwezig + ' (Niet waarneembaar = onderzoeksbeperking)'));
+      } else {
+        children.push(mkP('☒ ' + mt.afwezig));
+      }
     }
 
     // Analyse in het laboratorium
@@ -1909,6 +2083,17 @@ async function generateSOP() {
       }
       children.push(new Table({ rows: ovzRows, width: { size: 9000, type: WidthType.DXA } }));
       children.push(mkP(''));
+      // Legende
+      children.push(mkP('Legende:', { bold: true }));
+      children.push(new Table({
+        rows: [
+          mkRow([mkCell('', { shading: 'FFFFFF' }), mkCell('Niet-asbesthoudend')]),
+          mkRow([mkCell('', { shading: 'FFFF00' }), mkCell('Asbesthoudendheid niet gekend')]),
+          mkRow([mkCell('', { shading: 'FF0000' }), mkCell('Asbesthoudend', { bold: true })]),
+        ],
+        width: { size: 4000, type: WidthType.DXA },
+      }));
+      children.push(mkP(''));
     }
 
     // Materiaalfiches
@@ -1955,6 +2140,36 @@ async function generateSOP() {
       children.push(mkP(''));
     }
 
+    // === BIJLAGE 3a: SITUERING ASBESTVERDACHTE TOEPASSINGEN ===
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(mkP('Bijlage 3a: Situering asbestverdachte en -houdende toepassingen', { heading: HeadingLevel.HEADING_2, bold: true }));
+    if (bijlage3aImgs.length > 0) {
+      for (const img of bijlage3aImgs) {
+        children.push(new Paragraph({
+          children: [new ImageRun({ data: img.data, transformation: { width: img.width, height: img.height } })],
+          alignment: AlignmentType.CENTER, spacing: { after: 100 },
+        }));
+      }
+    } else {
+      children.push(mkP('Niet van toepassing.', { italics: true }));
+    }
+
+    // === BIJLAGE 3b: ANALYSEVERSLAGEN ===
+    children.push(mkP('Bijlage 3b: Analyseverslagen', { heading: HeadingLevel.HEADING_2, bold: true }));
+    if (bijlage3bImgs.length > 0) {
+      for (const img of bijlage3bImgs) {
+        children.push(new Paragraph({
+          children: [new ImageRun({ data: img.data, transformation: { width: img.width, height: img.height } })],
+          alignment: AlignmentType.CENTER, spacing: { after: 100 },
+        }));
+      }
+    } else {
+      children.push(mkP('Niet van toepassing.', { italics: true }));
+    }
+
+    children.push(mkP('Bijlage 3c: Andere documenten', { heading: HeadingLevel.HEADING_2, bold: true }));
+    children.push(mkP('Niet van toepassing.', { italics: true }));
+
     // === BIJLAGE 4: GEVAARLIJKE MATERIALEN ===
     children.push(new Paragraph({ children: [new PageBreak()] }));
     children.push(mkP('Bijlage 4: Potentieel gevaarlijke materialen andere dan asbest', { heading: HeadingLevel.HEADING_1, bold: true }));
@@ -1995,6 +2210,39 @@ async function generateSOP() {
       children.push(new Table({ rows: ficheRows, width: { size: 9000, type: WidthType.DXA } }));
       children.push(mkP(''));
     }
+
+    // === BIJLAGE 4b: IDENTIFICATIE (OPTIONEEL) ===
+    children.push(mkP('Bijlage 4b: Identificatie (optioneel)', { heading: HeadingLevel.HEADING_2, bold: true }));
+    children.push(mkP('Niet van toepassing.', { italics: true }));
+
+    // === BIJLAGE 4c: SITUERING GEVAARLIJKE MATERIALEN ===
+    children.push(mkP('Bijlage 4c: Situering', { heading: HeadingLevel.HEADING_2, bold: true }));
+    if (bijlage4cImgs.length > 0) {
+      for (const img of bijlage4cImgs) {
+        children.push(new Paragraph({
+          children: [new ImageRun({ data: img.data, transformation: { width: img.width, height: img.height } })],
+          alignment: AlignmentType.CENTER, spacing: { after: 100 },
+        }));
+      }
+    } else {
+      children.push(mkP('Niet van toepassing.', { italics: true }));
+    }
+
+    // === BIJLAGE 4d: ANALYSEVERSLAGEN GEVAARLIJKE MATERIALEN ===
+    children.push(mkP('Bijlage 4d: Analyseverslagen', { heading: HeadingLevel.HEADING_2, bold: true }));
+    if (bijlage4dImgs.length > 0) {
+      for (const img of bijlage4dImgs) {
+        children.push(new Paragraph({
+          children: [new ImageRun({ data: img.data, transformation: { width: img.width, height: img.height } })],
+          alignment: AlignmentType.CENTER, spacing: { after: 100 },
+        }));
+      }
+    } else {
+      children.push(mkP('Niet van toepassing.', { italics: true }));
+    }
+
+    children.push(mkP('Bijlage 4e: Andere documenten', { heading: HeadingLevel.HEADING_2, bold: true }));
+    children.push(mkP('Niet van toepassing.', { italics: true }));
 
     // === BIJLAGE 5: FOTO'S VELDONDERZOEK ===
     children.push(new Paragraph({ children: [new PageBreak()] }));
@@ -2117,6 +2365,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setupImagePreview('pfas-screenshot', 'preview-pfas');
   setupImagePreview('bouwplannen-fotos', 'preview-bouwplannen');
   setupImagePreview('verharding-fotos', 'preview-verhardingen');
+  setupImagePreview('bijlage3a-plannen', 'preview-bijlage3a');
+  setupImagePreview('bijlage3b-verslagen', 'preview-bijlage3b');
+  setupImagePreview('bijlage4c-plannen', 'preview-bijlage4c');
+  setupImagePreview('bijlage4d-verslagen', 'preview-bijlage4d');
+  setupImagePreview('niet-toegankelijk-plan', 'preview-niet-toegankelijk');
 
   // Add one default gebouw
   addGebouw();
